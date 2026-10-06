@@ -26,6 +26,7 @@ apikeys/
 node_modules/
 dist/
 .vite/
+coverage/
 
 # --- 编辑器 / 系统 ---
 .idea/

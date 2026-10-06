@@ -123,9 +123,9 @@ cd src/backend
 ruff check . && ruff format --check .
 pytest
 
-# 前端：单测 + 构建
+# 前端：单测 + 覆盖率门禁 + 构建
 cd src/frontend
-pnpm test
+pnpm test:coverage
 pnpm build
 
 # 全栈冒烟（Docker Compose 构建并健康检查，完成后自动清理）
@@ -137,11 +137,13 @@ CI 在 push / PR 时自动执行（`.github/workflows/ci.yml`）：
 | Job | 内容 |
 | --- | --- |
 | Backend | `ruff check` / `ruff format` / `pytest` / 许可证扫描（`pip-licenses`，阻止 GPL/AGPL）/ 漏洞审计（`pip-audit`） |
-| Frontend | `pnpm audit`（high+）/ `vitest` 单测 / `pnpm build` |
+| Frontend | `pnpm audit`（high+）/ `vitest` 单测 + **覆盖率门禁** / `pnpm build` |
 | Compose smoke | 全栈构建 + `/healthz` 健康检查 |
 | Trivy | 后端/前端镜像 CVE 扫描（CRITICAL/HIGH） |
+| SBOM | 生成 CycloneDX（后端 `cyclonedx-py`、前端 Syft）并上传产物 |
 
-安全分析另由 **CodeQL** 工作流负责（`.github/workflows/codeql.yml`）。
+安全分析另由 **CodeQL** 工作流负责（`.github/workflows/codeql.yml`）；
+依赖更新由 **Dependabot** 负责（`.github/dependabot.yml`：pip / npm / actions / docker，每周）。
 
 ## 许可证
 
