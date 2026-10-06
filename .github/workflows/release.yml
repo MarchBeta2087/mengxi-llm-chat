@@ -126,7 +126,7 @@ jobs:
           OUTPUT: CHANGELOG.md
 
       - name: Create release
-        uses: softprops/action-gh-release@v2.6.2
+        uses: softprops/action-gh-release@v3.0.3
         with:
           body: ${{ steps.cliff.outputs.content }}
           files: CHANGELOG.md
