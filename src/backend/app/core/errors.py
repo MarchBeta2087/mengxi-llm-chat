@@ -68,6 +68,11 @@ class Forbidden(MengxiError):
     code = 403
 
 
+class NotFound(MengxiError):
+    http_status = 404
+    code = 404
+
+
 # --- 限流 / 配额 ---
 class RateLimited(MengxiError):
     http_status = 429
