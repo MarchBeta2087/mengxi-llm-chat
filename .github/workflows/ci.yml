@@ -155,7 +155,7 @@ jobs:
           tags: mengxi-frontend:scan
 
       - name: Scan backend image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: mengxi-backend:scan
           format: table
@@ -164,7 +164,7 @@ jobs:
           exit-code: "1"
 
       - name: Scan frontend image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: mengxi-frontend:scan
           format: table
