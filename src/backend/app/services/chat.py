@@ -10,16 +10,17 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
+from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import KeyPoolExhausted, QuotaExceeded, RateLimited, UpstreamError
 from app.core.ssrf import SsrfPolicy
-from app.domain.ratelimit import RateLimitSpec
+from app.domain.ratelimit import LimitDecision, QuotaDecision, RateLimitSpec
 from app.infra.upstream import UpstreamChunk, UpstreamClient
 from app.models.api_key import ApiKey
 from app.models.recovery import AuditLog
 from app.models.user import User
-from app.repositories import ApiKeyRepository, AuditRepository
+from app.repositories import ApiKeyRepository, AuditRepository, GroupRepository
 from app.services.key_manager import KeyManager
 from app.services.ratelimit import CircuitBreaker, RateLimiter
 from app.services.scheduler import SchedulerService
@@ -51,6 +52,9 @@ class ChatService:
         upstream: object | None = None,
         fallback_to_public: bool = True,
         max_attempts: int = 3,
+        user_rate_spec: RateLimitSpec | None = None,
+        ip_rate_spec: RateLimitSpec | None = None,
+        client_ip: str | None = None,
     ) -> None:
         self.session = session
         self.user = user
@@ -62,17 +66,70 @@ class ChatService:
         self.upstream = upstream or UpstreamClient(policy)
         self.fallback_to_public = fallback_to_public
         self.max_attempts = max_attempts
+        self.user_rate_spec = user_rate_spec
+        self.ip_rate_spec = ip_rate_spec
+        self.client_ip = client_ip
         self.keys = ApiKeyRepository(session)
+        self.groups = GroupRepository(session)
         self.audit = AuditRepository(session)
 
-    async def stream(self, *, model: str, messages: list[ChatMessage]) -> AsyncIterator[ChatEvent]:
-        quota = await self.rate_limiter.check_user_quota(
-            str(self.user.id), self.user.daily_quota_tokens
-        )
-        if not quota.allowed:
-            raise QuotaExceeded(
-                "今日配额已用完", dimension="quota", used=quota.used, limit=quota.limit
+    # --- 三层兜底：用户→用户组→IP（Key 级在选 Key 后校验）---
+    async def _safe(self, coro):  # noqa: ANN001 - 内部降级包装
+        """Redis 不可用时降级：已登录用户放行，不因限流设施故障拒绝服务（风险 R4）。"""
+        try:
+            return await coro
+        except RedisError:
+            return None
+
+    async def _enforce_limits(self) -> None:
+        if self.user.daily_quota_tokens > 0:
+            quota: QuotaDecision | None = await self._safe(
+                self.rate_limiter.check_user_quota(str(self.user.id), self.user.daily_quota_tokens)
             )
+            if quota is not None and not quota.allowed:
+                raise QuotaExceeded(
+                    "今日配额已用完",
+                    dimension="quota",
+                    used=quota.used,
+                    limit=quota.limit,
+                )
+
+        if self.user.group_id is not None:
+            group = await self.groups.get(self.user.group_id)
+            if group is not None and group.daily_quota_tokens > 0:
+                group_quota: QuotaDecision | None = await self._safe(
+                    self.rate_limiter.check_group_quota(str(group.id), group.daily_quota_tokens)
+                )
+                if group_quota is not None and not group_quota.allowed:
+                    raise QuotaExceeded(
+                        "用户组配额已用完",
+                        dimension="group_quota",
+                        used=group_quota.used,
+                        limit=group_quota.limit,
+                    )
+
+        if self.user_rate_spec is not None and not self.user_rate_spec.is_unlimited:
+            decision: LimitDecision | None = await self._safe(
+                self.rate_limiter.consume_user_request(str(self.user.id), self.user_rate_spec)
+            )
+            if decision is not None and not decision.allowed:
+                raise RateLimited(
+                    "用户级限流",
+                    dimension=decision.dimension.value if decision.dimension else None,
+                )
+
+        if self.ip_rate_spec is not None and not self.ip_rate_spec.is_unlimited and self.client_ip:
+            ip_decision = await self._safe(
+                self.rate_limiter.consume_ip_request(self.client_ip, self.ip_rate_spec)
+            )
+            if ip_decision is not None and not ip_decision.allowed:
+                raise RateLimited(
+                    "IP 级限流",
+                    dimension=ip_decision.dimension.value if ip_decision.dimension else None,
+                )
+
+    async def stream(self, *, model: str, messages: list[ChatMessage]) -> AsyncIterator[ChatEvent]:
+        await self._enforce_limits()
 
         private_keys = await self.keys.list_private_for_user(self.user.id)
         public_keys = await self.keys.list_public()
@@ -93,14 +150,15 @@ class ChatService:
             tried.add(str(key.id))
             spec = RateLimitSpec.from_mapping(key.rate_limits_json)
 
-            decision = await self.rate_limiter.consume_key_request(key.id, spec)
-            if not decision.allowed:
+            decision = await self._safe(self.rate_limiter.consume_key_request(key.id, spec))
+            if decision is not None and not decision.allowed:
                 last_error = RateLimited(
                     "Key 触发限流",
                     dimension=decision.dimension.value if decision.dimension else None,
                 )
                 continue
-            if not (await self.rate_limiter.precheck_key_tokens(key.id, spec)).allowed:
+            token_decision = await self._safe(self.rate_limiter.precheck_key_tokens(key.id, spec))
+            if token_decision is not None and not token_decision.allowed:
                 last_error = RateLimited("Key 令牌额度耗尽")
                 continue
 
@@ -120,7 +178,7 @@ class ChatService:
             except StopAsyncIteration:
                 first = None
             except Exception as exc:  # noqa: BLE001 - 上游失败需回退
-                await self.circuit_breaker.record_failure(str(key.id))
+                await self._safe(self.circuit_breaker.record_failure(str(key.id)))
                 await self._record(key, model, self._latency(started), 502, picked.fallback_used)
                 last_error = UpstreamError(f"上游调用失败: {exc}")
                 continue
@@ -155,14 +213,16 @@ class ChatService:
             total = tokens_in + tokens_out
 
             if mid_error is not None:
-                await self.circuit_breaker.record_failure(str(key.id))
+                await self._safe(self.circuit_breaker.record_failure(str(key.id)))
                 await self._record(key, model, latency, 502, picked.fallback_used)
                 yield ChatEvent("error", {"code": 502, "message": f"上游流中断: {mid_error}"})
                 return
 
-            await self.rate_limiter.settle_key_tokens(key.id, spec, total)
-            await self.rate_limiter.add_user_usage(str(self.user.id), total)
-            await self.circuit_breaker.record_success(str(key.id))
+            await self._safe(self.rate_limiter.settle_key_tokens(key.id, spec, total))
+            await self._safe(self.rate_limiter.add_user_usage(str(self.user.id), total))
+            if self.user.group_id is not None:
+                await self._safe(self.rate_limiter.add_group_usage(str(self.user.group_id), total))
+            await self._safe(self.circuit_breaker.record_success(str(key.id)))
             await self._record(
                 key, model, latency, 200, picked.fallback_used, tokens_in, tokens_out
             )

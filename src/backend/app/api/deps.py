@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings
 from app.core.errors import Forbidden, KekLocked, Unauthorized
 from app.core.ssrf import SsrfPolicy
+from app.domain.ratelimit import RateLimitSpec
 from app.models.user import User
 from app.repositories import UserRepository
 from app.services.key_manager import KeyManager
@@ -49,6 +50,14 @@ def get_scheduler(request: Request) -> SchedulerService:
 
 def get_settings_dep(request: Request) -> Settings:
     return request.app.state.settings
+
+
+def get_user_rate_spec(request: Request) -> RateLimitSpec:
+    return request.app.state.user_rate_spec
+
+
+def get_ip_rate_spec(request: Request) -> RateLimitSpec:
+    return request.app.state.ip_rate_spec
 
 
 async def get_current_user(

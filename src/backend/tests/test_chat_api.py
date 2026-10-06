@@ -5,36 +5,11 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-import pytest
 from fastapi.testclient import TestClient
 
-from app.infra.upstream import UpstreamChunk
-from tests.conftest import register
+from tests.conftest import FakeUpstreamClient, register
 
 SECRET = "sk-chat-secret-000011112222"
-
-
-class FakeUpstreamClient:
-    """按序产出若干增量，最后一帧带 usage。"""
-
-    calls: list[dict] = []
-
-    def __init__(self, policy, *, timeout: float = 120.0) -> None:
-        self.policy = policy
-
-    async def stream_chat(self, *, base_url: str, api_key: str, payload: dict):
-        FakeUpstreamClient.calls.append(
-            {"base_url": base_url, "api_key": api_key, "payload": payload}
-        )
-        yield UpstreamChunk(text="你好")
-        yield UpstreamChunk(text="，世界")
-        yield UpstreamChunk(usage={"prompt_tokens": 5, "completion_tokens": 3})
-
-
-@pytest.fixture(autouse=True)
-def _fake_upstream(monkeypatch):
-    FakeUpstreamClient.calls = []
-    monkeypatch.setattr("app.services.chat.UpstreamClient", FakeUpstreamClient)
 
 
 def _create_key(client: TestClient, models: list[str] | None = None) -> dict:

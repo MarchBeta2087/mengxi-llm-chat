@@ -1,10 +1,24 @@
-"""管理后台路由（M1：主密钥状态与解锁）。"""
+"""管理后台路由：主密钥、用户/用户组、配额、审计检索。"""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
+import uuid
+from datetime import datetime
 
-from app.core.errors import BadRequest
+from fastapi import APIRouter, Depends, Query, Request
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.deps import get_session, require_admin
+from app.core.errors import BadRequest, NotFound
+from app.repositories import AuditRepository, GroupRepository, UserRepository
+from app.schemas.admin import (
+    AuditRead,
+    GroupCreate,
+    GroupRead,
+    GroupUpdate,
+    UserAdminRead,
+    UserAdminUpdate,
+)
 from app.schemas.common import PassphraseRequest
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -17,6 +31,11 @@ def _provider(request: Request):
     return provider
 
 
+def _ok(data, message: str = "ok") -> dict:
+    return {"code": 0, "data": data, "message": message}
+
+
+# --- 主密钥 ---
 @router.get("/kek")
 async def kek_status(request: Request) -> dict:
     provider = request.app.state.kek_provider
@@ -29,7 +48,7 @@ async def kek_status(request: Request) -> dict:
             },
             "message": "主密钥提供者未就绪",
         }
-    return {"code": 0, "data": provider.status(), "message": "ok"}
+    return _ok(provider.status())
 
 
 @router.post("/kek/initialize")
@@ -37,7 +56,7 @@ async def kek_initialize(body: PassphraseRequest, request: Request) -> dict:
     provider = _provider(request)
     await provider.initialize(body.passphrase)
     request.app.state.key_manager.reset()
-    return {"code": 0, "data": provider.status(), "message": "ok"}
+    return _ok(provider.status())
 
 
 @router.post("/kek/unlock")
@@ -45,7 +64,7 @@ async def kek_unlock(body: PassphraseRequest, request: Request) -> dict:
     provider = _provider(request)
     await provider.unlock(body.passphrase)
     request.app.state.key_manager.reset()
-    return {"code": 0, "data": provider.status(), "message": "ok"}
+    return _ok(provider.status())
 
 
 @router.post("/kek/lock")
@@ -53,4 +72,120 @@ async def kek_lock(request: Request) -> dict:
     provider = _provider(request)
     provider.lock()
     request.app.state.key_manager.reset()
-    return {"code": 0, "data": provider.status(), "message": "ok"}
+    return _ok(provider.status())
+
+
+# --- 用户管理 ---
+@router.get("/users")
+async def list_users(
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    _: object = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    users = await UserRepository(session).list(limit=limit, offset=offset)
+    data = [UserAdminRead.model_validate(u).model_dump(mode="json") for u in users]
+    return _ok(data)
+
+
+@router.patch("/users/{user_id}")
+async def update_user(
+    user_id: uuid.UUID,
+    body: UserAdminUpdate,
+    _: object = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    repo = UserRepository(session)
+    user = await repo.get_by_id(user_id)
+    if user is None:
+        raise NotFound("用户不存在")
+
+    if body.daily_quota_tokens is not None:
+        user.daily_quota_tokens = body.daily_quota_tokens
+    if body.status is not None:
+        user.status = body.status.value
+    if body.role is not None:
+        user.role = body.role.value
+    if "group_id" in body.model_fields_set:
+        if body.group_id is not None:
+            group = await GroupRepository(session).get(body.group_id)
+            if group is None:
+                raise BadRequest("用户组不存在")
+        user.group_id = body.group_id
+
+    await session.commit()
+    return _ok(UserAdminRead.model_validate(user).model_dump(mode="json"))
+
+
+# --- 用户组管理 ---
+@router.get("/groups")
+async def list_groups(
+    _: object = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    groups = await GroupRepository(session).list()
+    data = [GroupRead.model_validate(g).model_dump(mode="json") for g in groups]
+    return _ok(data)
+
+
+@router.post("/groups", status_code=201)
+async def create_group(
+    body: GroupCreate,
+    _: object = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    repo = GroupRepository(session)
+    if await repo.get_by_name(body.name) is not None:
+        raise BadRequest("用户组已存在")
+    from app.models.user import UserGroup
+
+    group = await repo.add(UserGroup(name=body.name, daily_quota_tokens=body.daily_quota_tokens))
+    await session.commit()
+    return _ok(GroupRead.model_validate(group).model_dump(mode="json"))
+
+
+@router.patch("/groups/{group_id}")
+async def update_group(
+    group_id: uuid.UUID,
+    body: GroupUpdate,
+    _: object = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    repo = GroupRepository(session)
+    group = await repo.get(group_id)
+    if group is None:
+        raise NotFound("用户组不存在")
+    if body.name is not None:
+        group.name = body.name
+    if body.daily_quota_tokens is not None:
+        group.daily_quota_tokens = body.daily_quota_tokens
+    await session.commit()
+    return _ok(GroupRead.model_validate(group).model_dump(mode="json"))
+
+
+# --- 审计检索 ---
+@router.get("/audit")
+async def query_audit(
+    user_id: uuid.UUID | None = Query(default=None),
+    key_id: uuid.UUID | None = Query(default=None),
+    status: int | None = Query(default=None),
+    fallback_only: bool = Query(default=False),
+    start: datetime | None = Query(default=None),
+    end: datetime | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    _: object = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    logs = await AuditRepository(session).list_all(
+        user_id=user_id,
+        key_id=key_id,
+        status=status,
+        fallback_only=fallback_only,
+        start=start,
+        end=end,
+        limit=limit,
+        offset=offset,
+    )
+    data = [AuditRead.model_validate(log).model_dump(mode="json") for log in logs]
+    return _ok(data)

@@ -6,6 +6,8 @@ import time
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from redis.exceptions import RedisError
+
 from app.domain.ratelimit import RateLimitSpec
 from app.domain.scheduler import Candidate, Scheduler, Selection, model_matches
 from app.models.api_key import ApiKey
@@ -42,8 +44,15 @@ class SchedulerService:
                 continue
 
             spec = RateLimitSpec.from_mapping(key.rate_limits_json)
-            used = await self.rate_limiter.current_key_usage(key.id, spec, now=now)
-            blocked = await self.circuit_breaker.is_blocked(str(key.id), now=now)
+            # Redis 不可用时降级：视为无用量/未熔断，按权重调度（风险 R4）
+            try:
+                used = await self.rate_limiter.current_key_usage(key.id, spec, now=now)
+            except RedisError:
+                used = {}
+            try:
+                blocked = await self.circuit_breaker.is_blocked(str(key.id), now=now)
+            except RedisError:
+                blocked = False
             candidates.append(
                 Candidate(
                     key_id=str(key.id),

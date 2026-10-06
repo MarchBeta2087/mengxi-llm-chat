@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import datetime as dt
 
 import pytest
@@ -99,6 +100,17 @@ async def test_three_tier_scopes_isolated(store: RedisStore) -> None:
 
 
 # --- Token 维度 ---
+async def test_concurrent_limit_accuracy(store: RedisStore) -> None:
+    """并发下原子检查应精确卡在限额（验收：误差 < 5% → 实际 0%）。"""
+    limiter = RateLimiter(store)
+    spec = RateLimitSpec(rpm=10)
+    results = await asyncio.gather(
+        *(limiter.consume_key_request("k1", spec, now=BASE) for _ in range(200))
+    )
+    allowed = sum(1 for r in results if r.allowed)
+    assert allowed == 10
+
+
 async def test_token_precheck_and_settle(store: RedisStore) -> None:
     limiter = RateLimiter(store)
     spec = RateLimitSpec(tpm=100)

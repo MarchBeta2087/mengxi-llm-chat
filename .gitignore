@@ -16,6 +16,11 @@ data/
 *.salt
 *.verify
 *.enc
+apikeys/
+
+# --- 本地实测数据库 ---
+*.db
+*.sqlite3
 
 # --- Node ---
 node_modules/
