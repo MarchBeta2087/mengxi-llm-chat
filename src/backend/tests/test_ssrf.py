@@ -112,6 +112,14 @@ async def test_missing_host_rejected() -> None:
         await validate_url("https:///nohost", SsrfPolicy())
 
 
+async def test_dns_failure_rejected() -> None:
+    async def resolver(host: str) -> list[str]:
+        raise OSError("name resolution failed")
+
+    with pytest.raises(SsrfRejected):
+        await validate_url("https://nope.invalid/v1", SsrfPolicy(), resolver=resolver)
+
+
 def test_pinned_url_and_host_header() -> None:
     target = ValidatedTarget(
         url="https://api.example.com:8443/v1/x?q=1",

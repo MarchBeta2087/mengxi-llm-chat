@@ -5,23 +5,26 @@ from __future__ import annotations
 import json
 from collections.abc import AsyncIterator
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
     get_circuit_breaker,
     get_current_user,
+    get_ip_rate_spec,
     get_key_manager,
     get_rate_limiter,
     get_scheduler,
     get_session,
     get_settings_dep,
     get_ssrf_policy,
+    get_user_rate_spec,
 )
 from app.core.config import Settings
 from app.core.errors import MengxiError
 from app.core.ssrf import SsrfPolicy
+from app.domain.ratelimit import RateLimitSpec
 from app.models.user import User
 from app.schemas.chat import ChatCompletionRequest
 from app.services.chat import ChatEvent, ChatMessage, ChatService
@@ -49,6 +52,7 @@ async def _event_stream(events: AsyncIterator[ChatEvent]) -> AsyncIterator[str]:
 @router.post("/completions")
 async def completions(
     body: ChatCompletionRequest,
+    request: Request,
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
     key_manager: KeyManager = Depends(get_key_manager),
@@ -57,6 +61,8 @@ async def completions(
     circuit_breaker: CircuitBreaker = Depends(get_circuit_breaker),
     scheduler: SchedulerService = Depends(get_scheduler),
     settings: Settings = Depends(get_settings_dep),
+    user_rate_spec: RateLimitSpec = Depends(get_user_rate_spec),
+    ip_rate_spec: RateLimitSpec = Depends(get_ip_rate_spec),
 ) -> StreamingResponse:
     service = ChatService(
         session,
@@ -67,6 +73,9 @@ async def completions(
         scheduler=scheduler,
         policy=policy,
         fallback_to_public=settings.fallback_to_public,
+        user_rate_spec=user_rate_spec,
+        ip_rate_spec=ip_rate_spec,
+        client_ip=request.client.host if request.client else None,
     )
     messages = [ChatMessage(role=m.role, content=m.content) for m in body.messages]
     events = service.stream(model=body.model, messages=messages)

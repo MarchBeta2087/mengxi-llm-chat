@@ -128,7 +128,10 @@ async def validate_url(
     if literal is not None:
         candidates = [str(literal)]
     else:
-        candidates = await resolver(host)
+        try:
+            candidates = await resolver(host)
+        except OSError as exc:
+            raise SsrfRejected(f"无法解析主机: {host}") from exc
         if not candidates:
             raise SsrfRejected(f"无法解析主机: {host}")
 

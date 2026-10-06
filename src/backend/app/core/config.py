@@ -54,6 +54,11 @@ class Settings(BaseSettings):
     fallback_to_public: bool = True
     audit_retention_days: int = Field(default=90, ge=1)
 
+    # --- 三层兜底限流（JSON 字符串，空 = 关闭）---
+    # 示例：MENGXI_USER_RATE_LIMITS='{"rpm": 120, "rpd": 2000}'
+    user_rate_limits: str = ""
+    ip_rate_limits: str = ""
+
     # --- 派生路径与集合 ---
     @property
     def keys_dir(self) -> Path:

@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import json
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -64,6 +65,17 @@ class RateLimitSpec:
             tph=int(data.get("tph", 0) or 0),
             tpd=int(data.get("tpd", 0) or 0),
         )
+
+    @classmethod
+    def from_json(cls, raw: str | None) -> RateLimitSpec:
+        """从 JSON 字符串解析；空值或非法 JSON 视为不限。"""
+        if not raw:
+            return cls()
+        try:
+            data = json.loads(raw)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return cls()
+        return cls.from_mapping(data if isinstance(data, dict) else {})
 
     def limit_for(self, dimension: Dimension) -> int:
         return int(getattr(self, dimension.value))
