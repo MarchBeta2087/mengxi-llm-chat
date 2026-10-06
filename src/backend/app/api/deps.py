@@ -8,11 +8,14 @@ from collections.abc import AsyncIterator
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import Settings
 from app.core.errors import Forbidden, KekLocked, Unauthorized
 from app.core.ssrf import SsrfPolicy
 from app.models.user import User
 from app.repositories import UserRepository
 from app.services.key_manager import KeyManager
+from app.services.ratelimit import CircuitBreaker, RateLimiter
+from app.services.scheduler import SchedulerService
 
 
 async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
@@ -30,6 +33,22 @@ def get_key_manager(request: Request) -> KeyManager:
     if manager is None:
         raise KekLocked("主密钥服务不可用")
     return manager
+
+
+def get_rate_limiter(request: Request) -> RateLimiter:
+    return request.app.state.rate_limiter
+
+
+def get_circuit_breaker(request: Request) -> CircuitBreaker:
+    return request.app.state.circuit_breaker
+
+
+def get_scheduler(request: Request) -> SchedulerService:
+    return request.app.state.scheduler
+
+
+def get_settings_dep(request: Request) -> Settings:
+    return request.app.state.settings
 
 
 async def get_current_user(

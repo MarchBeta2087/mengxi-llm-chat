@@ -12,7 +12,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 import app.models  # noqa: F401  导入以注册 ORM 元数据
 from app import __version__
-from app.api import admin_router, auth_router, keys_router
+from app.api import admin_router, auth_router, chat_router, keys_router
 from app.core.config import Settings, get_settings
 from app.core.crypto.kek import KekProvider, build_kek_provider
 from app.core.errors import MengxiError
@@ -27,7 +27,9 @@ from app.services.scheduler import SchedulerService
 logger = logging.getLogger(__name__)
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None, *, redis_store: RedisStore | None = None
+) -> FastAPI:
     settings = settings or get_settings()
     setup_logging(settings)
 
@@ -45,7 +47,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         max_redirects=settings.max_redirects,
     )
     database = Database(settings.database_url, echo=settings.debug)
-    redis_store = RedisStore(settings.redis_url)
+    redis_store = redis_store or RedisStore(settings.redis_url)
     rate_limiter = RateLimiter(redis_store)
     circuit_breaker = CircuitBreaker(redis_store)
     scheduler = SchedulerService(rate_limiter, circuit_breaker)
@@ -98,6 +100,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(auth_router)
     app.include_router(keys_router)
+    app.include_router(chat_router)
     app.include_router(admin_router)
 
     @app.get("/healthz", tags=["system"])

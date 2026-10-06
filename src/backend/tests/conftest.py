@@ -9,9 +9,11 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+from fakeredis.aioredis import FakeRedis
 from fastapi.testclient import TestClient
 
 from app.core.config import Settings
+from app.infra.redis_store import RedisStore
 from app.main import create_app
 
 
@@ -40,7 +42,9 @@ def settings(tmp_path: Path, db_path: Path, master_key_b64: str) -> Settings:
 
 @pytest.fixture
 def client(settings: Settings) -> Iterator[TestClient]:
-    app = create_app(settings)
+    fake_redis = FakeRedis(decode_responses=True)
+    store = RedisStore("redis://fake", client=fake_redis)
+    app = create_app(settings, redis_store=store)
     with TestClient(app) as test_client:
         yield test_client
 
