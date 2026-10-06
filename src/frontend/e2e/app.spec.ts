@@ -84,3 +84,20 @@ test('登录后可流式聊天', async ({ page }) => {
   // 流式回复渲染
   await expect(page.getByText('你好，世界')).toBeVisible()
 })
+
+test('可退出登录', async ({ page }) => {
+  const state: MockState = { authed: false }
+  await mockApi(page, state)
+
+  await page.goto('/')
+  await page.getByLabel('用户名').fill('alice')
+  await page.getByLabel('密码').fill('password123')
+  await page.getByRole('button', { name: '登录' }).last().click()
+  await expect(page.getByRole('button', { name: /新会话/ })).toBeVisible()
+
+  state.authed = false
+  await page.getByRole('button', { name: /退出登录/ }).click()
+
+  await expect(page.getByRole('heading', { name: '梦溪畅谈' })).toBeVisible()
+  await expect(page.getByLabel('用户名')).toBeVisible()
+})

@@ -1,11 +1,17 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useThemeStore } from '../stores/theme'
 import ThemePanel from './ThemePanel.vue'
 
 const auth = useAuthStore()
 const theme = useThemeStore()
+const router = useRouter()
+
+async function logout() {
+  await auth.logout()
+  router.push({ name: 'login' })
+}
 </script>
 
 <template>
@@ -23,9 +29,10 @@ const theme = useThemeStore()
       <div class="spacer" />
       <button class="nav-link" @click="theme.panelOpen = !theme.panelOpen">🎨 外观</button>
       <div class="who">
-        <span>{{ auth.user?.username }}</span>
+        <span class="uname">{{ auth.user?.username }}</span>
         <span class="role">{{ auth.user?.role }}</span>
       </div>
+      <button class="nav-link logout" @click="logout">🚪 退出登录</button>
     </nav>
     <main class="content">
       <RouterView />
@@ -92,6 +99,14 @@ const theme = useThemeStore()
   justify-content: space-between;
 }
 .role {
+  color: var(--accent);
+}
+.uname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logout {
   color: var(--accent);
 }
 .content {

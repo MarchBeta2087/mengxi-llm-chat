@@ -1,13 +1,20 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { useThemeStore } from '../stores/theme'
 
 const theme = useThemeStore()
 const auth = useAuthStore()
+const router = useRouter()
 const audit = ref<Record<string, unknown>[]>([])
 const kek = ref<Record<string, unknown> | null>(null)
+
+async function logout() {
+  await auth.logout()
+  router.push({ name: 'login' })
+}
 
 onMounted(async () => {
   audit.value = await api.myAudit(50)
@@ -24,6 +31,18 @@ onMounted(async () => {
 <template>
   <div class="page">
     <h2>设置</h2>
+
+    <div class="card">
+      <h3>账户</h3>
+      <div class="row">
+        <span>用户名</span>
+        <span>{{ auth.user?.username }}（{{ auth.user?.role }}）</span>
+      </div>
+      <div class="row">
+        <span>会话</span>
+        <button class="btn" @click="logout">退出登录</button>
+      </div>
+    </div>
 
     <div class="card">
       <h3>外观（个人偏好）</h3>

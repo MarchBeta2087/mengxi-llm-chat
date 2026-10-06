@@ -102,6 +102,8 @@ pnpm dev                    # http://127.0.0.1:5173（/api 代理到 8000）
 
 | 文档 | 内容 |
 | --- | --- |
+| [用户使用手册](docs/user-guide.md) | 面向普通用户：登录/退出、聊天、密钥、插件、外观、隐私 |
+| [管理员手册](docs/admin-guide.md) | 面向管理员：公有 Key、用户/组、配额、插件、审计、主密钥 |
 | [需求分析 v2.0](docs/llm-chat-app-requirements-v2.md) | 功能/非功能需求、权限矩阵、威胁模型 |
 | [可行性分析](docs/llm-chat-app-feasibility.md) | 技术/经济/法律/进度可行性 |
 | [设计说明书](docs/llm-chat-app-design.md) | 架构、模块、数据模型、接口、安全、测试 |
