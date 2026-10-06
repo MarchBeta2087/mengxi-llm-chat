@@ -11,6 +11,7 @@ from app.domain.ratelimit import (
     REQUEST_DIMENSIONS,
     TOKEN_DIMENSIONS,
     CircuitState,
+    Dimension,
     LimitDecision,
     QuotaDecision,
     RateLimitSpec,
@@ -114,6 +115,33 @@ class RateLimiter:
             scope="key", identifier=str(key_id), spec=spec, tokens=tokens, now=now
         )
 
+    # --- 当前窗口用量（供调度器计算剩余配额比例）---
+    async def current_usage(
+        self,
+        *,
+        scope: str,
+        identifier: str,
+        spec: RateLimitSpec,
+        now: float | None = None,
+    ) -> dict[str, int]:
+        moment = time.time() if now is None else now
+        counters = build_counters(
+            scope=scope,
+            identifier=identifier,
+            spec=spec,
+            dimensions=tuple(Dimension),
+            delta=0,
+            now=moment,
+            prefix=self.prefix,
+        )
+        values = await self.store.get_many_int([c.key for c in counters])
+        return {c.dimension.value: v for c, v in zip(counters, values, strict=True)}
+
+    async def current_key_usage(
+        self, key_id: str, spec: RateLimitSpec, *, now: float | None = None
+    ) -> dict[str, int]:
+        return await self.current_usage(scope="key", identifier=str(key_id), spec=spec, now=now)
+
     # --- 日配额 ---
     async def check_user_quota(
         self,
@@ -173,6 +201,10 @@ class CircuitBreaker:
 
     async def state(self, key_id: str) -> CircuitState:
         return await self.store.circuit_state(key_id)
+
+    async def is_blocked(self, key_id: str, *, now: float | None = None) -> bool:
+        moment = time.time() if now is None else now
+        return await self.store.circuit_is_blocked(key_id, cooldown=self.cooldown, now=moment)
 
     async def reset(self, key_id: str) -> None:
         await self.store.reset_circuit(key_id)

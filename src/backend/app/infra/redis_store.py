@@ -88,6 +88,12 @@ class RedisStore:
         value = await self.client.get(key)
         return int(value) if value is not None else 0
 
+    async def get_many_int(self, keys: list[str]) -> list[int]:
+        if not keys:
+            return []
+        values = await self.client.mget(keys)
+        return [int(v) if v is not None else 0 for v in values]
+
     async def incr(self, key: str, *, ttl: int | None = None, amount: int = 1) -> int:
         value = await self.client.incrby(key, amount)
         if ttl is not None and value == amount:
@@ -185,6 +191,14 @@ class RedisStore:
 
     async def circuit_record_success(self, key_id: str) -> None:
         await self.delete(*circuit_keys(key_id).values())
+
+    async def circuit_is_blocked(self, key_id: str, *, cooldown: int, now: float) -> bool:
+        """只读判定：open 且未过冷却期则不可用；half_open 允许尝试。"""
+        state = await self.circuit_state(key_id)
+        if state is CircuitState.CLOSED or state is CircuitState.HALF_OPEN:
+            return False
+        opened_at = await self.get_int(circuit_keys(key_id)["opened_at"])
+        return (now - opened_at) < cooldown
 
     async def reset_circuit(self, key_id: str) -> None:
         await self.delete(*circuit_keys(key_id).values())

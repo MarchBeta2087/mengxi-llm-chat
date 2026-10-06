@@ -22,6 +22,7 @@ from app.db.session import Database
 from app.infra.redis_store import RedisStore
 from app.services.key_manager import KeyManager
 from app.services.ratelimit import CircuitBreaker, RateLimiter
+from app.services.scheduler import SchedulerService
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     redis_store = RedisStore(settings.redis_url)
     rate_limiter = RateLimiter(redis_store)
     circuit_breaker = CircuitBreaker(redis_store)
+    scheduler = SchedulerService(rate_limiter, circuit_breaker)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -61,6 +63,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.redis_store = redis_store
         app.state.rate_limiter = rate_limiter
         app.state.circuit_breaker = circuit_breaker
+        app.state.scheduler = scheduler
 
         logger.info(
             "%s 启动 (env=%s, kek_profile=%s)",
