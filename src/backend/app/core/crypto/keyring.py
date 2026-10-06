@@ -29,6 +29,12 @@ class KeyRing:
     def has(self, key_gen: int) -> bool:
         return key_gen in self._keys
 
+    def get(self, key_gen: int) -> bytes:
+        key = self._keys.get(key_gen)
+        if key is None:
+            raise CipherError(f"no key for generation {key_gen}")
+        return key
+
     @property
     def generations(self) -> tuple[int, ...]:
         return tuple(sorted(self._keys))

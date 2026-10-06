@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     argon2_hash_len: int = Field(default=32, ge=16, le=64)
     kek_lock_threshold: int = Field(default=5, ge=1)
     kek_lock_seconds: int = Field(default=900, ge=0)
+    recovery_code_count: int = Field(default=8, ge=1, le=32)
 
     # --- SSRF（§4.4）---
     allow_http_upstream: bool = False
@@ -54,6 +55,7 @@ class Settings(BaseSettings):
     allow_anonymous: bool = False
     fallback_to_public: bool = True
     audit_retention_days: int = Field(default=90, ge=1)
+    encrypted_search: bool = False  # 加密会话盲索引全文检索（默认关闭）
 
     # --- 三层兜底限流（JSON 字符串，空 = 关闭）---
     # 示例：MENGXI_USER_RATE_LIMITS='{"rpm": 120, "rpd": 2000}'

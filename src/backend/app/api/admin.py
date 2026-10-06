@@ -20,6 +20,8 @@ from app.schemas.admin import (
     UserAdminUpdate,
 )
 from app.schemas.common import PassphraseRequest
+from app.schemas.recovery import RecoveryUseRequest
+from app.services.recovery import RecoveryService
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -33,6 +35,16 @@ def _provider(request: Request):
 
 def _ok(data, message: str = "ok") -> dict:
     return {"code": 0, "data": data, "message": message}
+
+
+def _recovery_service(request: Request, session: AsyncSession) -> RecoveryService:
+    return RecoveryService(
+        session,
+        request.app.state.kek_provider,
+        request.app.state.key_manager,
+        request.app.state.settings,
+        cache=request.app.state.conversation_cache,
+    )
 
 
 # --- 主密钥 ---
@@ -56,7 +68,14 @@ async def kek_initialize(body: PassphraseRequest, request: Request) -> dict:
     provider = _provider(request)
     await provider.initialize(body.passphrase)
     request.app.state.key_manager.reset()
-    return _ok(provider.status())
+    codes: list[str] = []
+    if request.app.state.kek_provider is not None:
+        # 初始化即生成恢复码，明文仅此一次返回
+        async with request.app.state.db.session() as session:
+            codes = await _recovery_service(request, session).generate()
+    status = provider.status()
+    status["recovery_codes"] = codes
+    return _ok(status)
 
 
 @router.post("/kek/unlock")
@@ -73,6 +92,40 @@ async def kek_lock(request: Request) -> dict:
     provider.lock()
     request.app.state.key_manager.reset()
     return _ok(provider.status())
+
+
+# --- 恢复码 ---
+@router.get("/recovery-codes")
+async def recovery_status(
+    request: Request,
+    _: object = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    service = _recovery_service(request, session)
+    return _ok({"remaining": await service.remaining()})
+
+
+@router.post("/recovery-codes/regenerate")
+async def recovery_regenerate(
+    request: Request,
+    _: object = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    codes = await _recovery_service(request, session).generate()
+    return _ok({"codes": codes})
+
+
+@router.post("/recovery-codes/use")
+async def recovery_use(
+    body: RecoveryUseRequest,
+    request: Request,
+    _: object = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    codes = await _recovery_service(request, session).use(
+        body.code, new_passphrase=body.new_passphrase
+    )
+    return _ok({"codes": codes})
 
 
 # --- 用户管理 ---

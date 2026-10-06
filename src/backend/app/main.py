@@ -17,6 +17,7 @@ from app.api import (
     audit_router,
     auth_router,
     chat_router,
+    conversations_router,
     keys_router,
     plugins_admin_router,
     plugins_router,
@@ -30,6 +31,7 @@ from app.db.session import Database
 from app.domain.ratelimit import RateLimitSpec
 from app.infra.redis_store import RedisStore
 from app.infra.sandbox import PluginSandbox
+from app.services.conversation import ConversationKeyCache
 from app.services.key_manager import KeyManager
 from app.services.ratelimit import CircuitBreaker, RateLimiter
 from app.services.scheduler import SchedulerService
@@ -61,6 +63,7 @@ def create_app(
     user_rate_spec = RateLimitSpec.from_json(settings.user_rate_limits)
     ip_rate_spec = RateLimitSpec.from_json(settings.ip_rate_limits)
     plugin_sandbox = PluginSandbox(ssrf_policy)
+    conversation_cache = ConversationKeyCache()
     rate_limiter = RateLimiter(redis_store)
     circuit_breaker = CircuitBreaker(redis_store)
     scheduler = SchedulerService(rate_limiter, circuit_breaker)
@@ -82,6 +85,7 @@ def create_app(
         app.state.user_rate_spec = user_rate_spec
         app.state.ip_rate_spec = ip_rate_spec
         app.state.plugin_sandbox = plugin_sandbox
+        app.state.conversation_cache = conversation_cache
 
         logger.info(
             "%s 启动 (env=%s, kek_profile=%s)",
@@ -117,6 +121,7 @@ def create_app(
     app.include_router(auth_router)
     app.include_router(keys_router)
     app.include_router(chat_router)
+    app.include_router(conversations_router)
     app.include_router(audit_router)
     app.include_router(plugins_router)
     app.include_router(plugins_admin_router)

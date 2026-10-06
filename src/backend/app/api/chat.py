@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
     get_circuit_breaker,
+    get_conversation_service,
     get_current_user,
     get_ip_rate_spec,
     get_key_manager,
@@ -28,6 +29,7 @@ from app.domain.ratelimit import RateLimitSpec
 from app.models.user import User
 from app.schemas.chat import ChatCompletionRequest
 from app.services.chat import ChatEvent, ChatMessage, ChatService
+from app.services.conversation import ConversationService
 from app.services.key_manager import KeyManager
 from app.services.ratelimit import CircuitBreaker, RateLimiter
 from app.services.scheduler import SchedulerService
@@ -63,7 +65,13 @@ async def completions(
     settings: Settings = Depends(get_settings_dep),
     user_rate_spec: RateLimitSpec = Depends(get_user_rate_spec),
     ip_rate_spec: RateLimitSpec = Depends(get_ip_rate_spec),
+    conversations: ConversationService = Depends(get_conversation_service),
 ) -> StreamingResponse:
+    if body.conversation_id is not None:
+        conversation = await conversations.get_owned(user, body.conversation_id)
+    else:
+        conversation = await conversations.create(user, model=body.model)
+
     service = ChatService(
         session,
         user=user,
@@ -76,9 +84,10 @@ async def completions(
         user_rate_spec=user_rate_spec,
         ip_rate_spec=ip_rate_spec,
         client_ip=request.client.host if request.client else None,
+        conversations=conversations,
     )
     messages = [ChatMessage(role=m.role, content=m.content) for m in body.messages]
-    events = service.stream(model=body.model, messages=messages)
+    events = service.stream(model=body.model, messages=messages, conversation=conversation)
     return StreamingResponse(
         _event_stream(events),
         media_type="text/event-stream",

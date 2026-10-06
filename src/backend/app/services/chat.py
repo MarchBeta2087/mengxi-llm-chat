@@ -18,9 +18,11 @@ from app.core.ssrf import SsrfPolicy
 from app.domain.ratelimit import LimitDecision, QuotaDecision, RateLimitSpec
 from app.infra.upstream import UpstreamChunk, UpstreamClient
 from app.models.api_key import ApiKey
+from app.models.conversation import Conversation
 from app.models.recovery import AuditLog
 from app.models.user import User
 from app.repositories import ApiKeyRepository, AuditRepository, GroupRepository
+from app.services.conversation import ConversationService
 from app.services.key_manager import KeyManager
 from app.services.ratelimit import CircuitBreaker, RateLimiter
 from app.services.scheduler import SchedulerService
@@ -55,6 +57,7 @@ class ChatService:
         user_rate_spec: RateLimitSpec | None = None,
         ip_rate_spec: RateLimitSpec | None = None,
         client_ip: str | None = None,
+        conversations: ConversationService | None = None,
     ) -> None:
         self.session = session
         self.user = user
@@ -69,6 +72,7 @@ class ChatService:
         self.user_rate_spec = user_rate_spec
         self.ip_rate_spec = ip_rate_spec
         self.client_ip = client_ip
+        self.conversations = conversations
         self.keys = ApiKeyRepository(session)
         self.groups = GroupRepository(session)
         self.audit = AuditRepository(session)
@@ -128,8 +132,21 @@ class ChatService:
                     dimension=ip_decision.dimension.value if ip_decision.dimension else None,
                 )
 
-    async def stream(self, *, model: str, messages: list[ChatMessage]) -> AsyncIterator[ChatEvent]:
+    async def stream(
+        self, *, model: str, messages: list[ChatMessage], conversation: Conversation | None = None
+    ) -> AsyncIterator[ChatEvent]:
         await self._enforce_limits()
+
+        # 持久化本轮输入；构造上游上下文（历史密文解密 + 本轮消息）
+        history: list[ChatMessage] = []
+        if conversation is not None and self.conversations is not None:
+            context = await self.conversations.context(self.user, conversation)
+            history = [ChatMessage(role=c.role, content=c.content) for c in context]
+            for message in messages:
+                await self.conversations.append_message(
+                    self.user, conversation, message.role, message.content
+                )
+        payload_messages = [*history, *messages]
 
         private_keys = await self.keys.list_private_for_user(self.user.id)
         public_keys = await self.keys.list_public()
@@ -169,7 +186,7 @@ class ChatService:
             stream = self.upstream.stream_chat(
                 base_url=key.base_url,
                 api_key=secret,
-                payload=self._payload(model, messages),
+                payload=self._payload(model, payload_messages),
             )
 
             # 连接阶段错误可在产出任何事件前回退到下一个 Key
@@ -190,19 +207,23 @@ class ChatService:
                     "pool": picked.pool,
                     "fallback": picked.fallback_used,
                     "key_id": str(key.id),
+                    "conversation_id": str(conversation.id) if conversation else None,
                 },
             )
 
             usage: dict | None = None
             mid_error: Exception | None = None
+            parts: list[str] = []
             try:
                 if first is not None:
                     usage = first.usage or usage
                     if first.text:
+                        parts.append(first.text)
                         yield ChatEvent("delta", {"text": first.text})
                 async for chunk in stream:
                     usage = chunk.usage or usage
                     if chunk.text:
+                        parts.append(chunk.text)
                         yield ChatEvent("delta", {"text": chunk.text})
             except Exception as exc:  # noqa: BLE001 - 流中断无法回退
                 mid_error = exc
@@ -226,6 +247,17 @@ class ChatService:
             await self._record(
                 key, model, latency, 200, picked.fallback_used, tokens_in, tokens_out
             )
+
+            reply = "".join(parts)
+            if reply and conversation is not None and self.conversations is not None:
+                await self.conversations.append_message(
+                    self.user,
+                    conversation,
+                    "assistant",
+                    reply,
+                    tokens_in=tokens_in,
+                    tokens_out=tokens_out,
+                )
 
             if usage:
                 yield ChatEvent("usage", {"tokens_in": tokens_in, "tokens_out": tokens_out})

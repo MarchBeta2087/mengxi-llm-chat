@@ -5,12 +5,13 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.api_key import ApiKey
+from app.models.conversation import Conversation, Message, MessageKeyword
 from app.models.plugin import GroupPlugin, Plugin, UserPlugin
-from app.models.recovery import AuditLog
+from app.models.recovery import AuditLog, RecoveryCode
 from app.models.user import User, UserGroup
 
 
@@ -217,3 +218,130 @@ class GroupPluginRepository:
         row = await self.get(group_id, plugin_id)
         if row is not None:
             await self.session.delete(row)
+
+
+class ConversationRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def get(self, conversation_id: uuid.UUID) -> Conversation | None:
+        return await self.session.get(Conversation, conversation_id)
+
+    async def list_for_user(
+        self, user_id: uuid.UUID, *, include_archived: bool = False
+    ) -> list[Conversation]:
+        stmt = select(Conversation).where(Conversation.user_id == user_id)
+        if not include_archived:
+            stmt = stmt.where(Conversation.archived.is_(False))
+        stmt = stmt.order_by(Conversation.created_at.desc())
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def search_titles(
+        self, user_id: uuid.UUID, query: str, *, limit: int = 20
+    ) -> list[Conversation]:
+        stmt = (
+            select(Conversation)
+            .where(Conversation.user_id == user_id, Conversation.title.ilike(f"%{query}%"))
+            .limit(limit)
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def add(self, conversation: Conversation) -> Conversation:
+        self.session.add(conversation)
+        await self.session.flush()
+        return conversation
+
+    async def delete(self, conversation: Conversation) -> None:
+        await self.session.delete(conversation)
+
+
+class MessageRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def add(self, message: Message) -> Message:
+        self.session.add(message)
+        await self.session.flush()
+        return message
+
+    async def list_for_conversation(
+        self, conversation_id: uuid.UUID, *, limit: int = 200
+    ) -> list[Message]:
+        result = await self.session.execute(
+            select(Message)
+            .where(Message.conversation_id == conversation_id)
+            .order_by(Message.created_at, Message.id)
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+
+    async def recent_for_conversation(
+        self, conversation_id: uuid.UUID, *, limit: int = 40
+    ) -> list[Message]:
+        result = await self.session.execute(
+            select(Message)
+            .where(Message.conversation_id == conversation_id)
+            .order_by(Message.created_at.desc(), Message.id.desc())
+            .limit(limit)
+        )
+        rows = list(result.scalars().all())
+        rows.reverse()
+        return rows
+
+    async def list_by_ids(self, message_ids: list[uuid.UUID]) -> list[Message]:
+        if not message_ids:
+            return []
+        result = await self.session.execute(select(Message).where(Message.id.in_(message_ids)))
+        return list(result.scalars().all())
+
+
+class MessageKeywordRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def add_many(self, message_id: uuid.UUID, fingerprints: set[bytes]) -> None:
+        for fp in fingerprints:
+            self.session.add(MessageKeyword(message_id=message_id, keyword_fp=fp))
+        await self.session.flush()
+
+    async def search(self, fingerprints: set[bytes], *, limit: int = 200) -> list[uuid.UUID]:
+        if not fingerprints:
+            return []
+        result = await self.session.execute(
+            select(MessageKeyword.message_id)
+            .where(MessageKeyword.keyword_fp.in_(list(fingerprints)))
+            .limit(limit)
+        )
+        return list(dict.fromkeys(result.scalars().all()))
+
+
+class RecoveryCodeRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def add(self, row: RecoveryCode) -> RecoveryCode:
+        self.session.add(row)
+        await self.session.flush()
+        return row
+
+    async def get_by_hash(self, code_hash: bytes) -> RecoveryCode | None:
+        result = await self.session.execute(
+            select(RecoveryCode).where(RecoveryCode.code_hash == code_hash)
+        )
+        return result.scalar_one_or_none()
+
+    async def list_all(self) -> list[RecoveryCode]:
+        result = await self.session.execute(select(RecoveryCode).order_by(RecoveryCode.created_at))
+        return list(result.scalars().all())
+
+    async def delete_all(self) -> None:
+        await self.session.execute(delete(RecoveryCode))
+        await self.session.flush()
+
+    async def count_unused(self) -> int:
+        result = await self.session.execute(
+            select(func.count()).select_from(RecoveryCode).where(RecoveryCode.used_at.is_(None))
+        )
+        return int(result.scalar_one())

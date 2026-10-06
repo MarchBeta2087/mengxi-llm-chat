@@ -81,6 +81,21 @@ class KeyManager:
     def unwrap_conversation_key(self, wrapped: bytes) -> bytes:
         return self.kek.unwrap(wrapped, aad=CONV_DEK_AAD)
 
+    # --- 供恢复码重置流程使用 ---
+    def api_dek(self) -> tuple[int, bytes]:
+        """返回当前代次与 DEK_key 明文（仅在内存中短暂使用）。"""
+        self.ensure_loaded()
+        generation = self.ring.latest
+        return generation, self.ring.get(generation)
+
+    def store_api_dek(self, dek: bytes, key_gen: int) -> None:
+        """用当前 KEK 重新包裹并落盘 DEK_key（用于口令重置后重包裹）。"""
+        blob = self.kek.wrap(dek, key_gen=key_gen, aad=API_KEY_DEK_AAD)
+        _atomic_write(self.dek_file, blob)
+        self.reset()
+        self.ring.add(key_gen, dek)
+        self._loaded = True
+
     # --- 轮换 ---
     def rotate_dek(self) -> int:
         """生成新代次 DEK_key，旧代次保留在内存 ring 中用于解密旧数据。"""
