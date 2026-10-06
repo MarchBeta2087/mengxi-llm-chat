@@ -16,6 +16,8 @@ COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
 COPY app ./app
+COPY alembic.ini ./
+COPY migrations ./migrations
 
 # 非 root 运行
 RUN useradd --create-home --uid 10001 mengxi \
