@@ -128,6 +128,10 @@ cd src/frontend
 pnpm test:coverage
 pnpm build
 
+# 前端 E2E（需先 pnpm exec playwright install chromium）
+pnpm exec playwright install chromium
+pnpm e2e
+
 # 全栈冒烟（Docker Compose 构建并健康检查，完成后自动清理）
 bash src/deploy/smoke.sh
 ```
@@ -138,12 +142,29 @@ CI 在 push / PR 时自动执行（`.github/workflows/ci.yml`）：
 | --- | --- |
 | Backend | `ruff check` / `ruff format` / `pytest` / 许可证扫描（`pip-licenses`，阻止 GPL/AGPL）/ 漏洞审计（`pip-audit`） |
 | Frontend | `pnpm audit`（high+）/ `vitest` 单测 + **覆盖率门禁** / `pnpm build` |
+| Frontend E2E | Playwright（登录 + 流式聊天，API mock；初期非阻断） |
 | Compose smoke | 全栈构建 + `/healthz` 健康检查 |
 | Trivy | 后端/前端镜像 CVE 扫描（CRITICAL/HIGH） |
 | SBOM | 生成 CycloneDX（后端 `cyclonedx-py`、前端 Syft）并上传产物 |
 
-安全分析另由 **CodeQL** 工作流负责（`.github/workflows/codeql.yml`）；
-依赖更新由 **Dependabot** 负责（`.github/dependabot.yml`：pip / npm / actions / docker，每周）。
+CI 同时支持**每日定时全量运行**（`schedule`）与手动触发；安全分析由 **CodeQL** 工作流负责
+（`.github/workflows/codeql.yml`）；依赖更新由 **Dependabot** 负责
+（`.github/dependabot.yml`：pip / npm / actions / docker，每周）。
+
+## 发布
+
+打 tag 即触发发布流水线（`.github/workflows/release.yml`）：
+
+```bash
+# 打版本 tag 并推送，即自动测试 → 构建镜像 → 推送 GHCR → 创建 Release
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+- 测试门禁：`ruff check` + `pytest`；
+- 镜像推送到 GHCR（自动小写化）：
+  - `ghcr.io/<owner>/mengxi-llm-chat-backend:<version>`（含 `latest`）
+  - `ghcr.io/<owner>/mengxi-llm-chat-frontend:<version>`（含 `latest`）
+- 自动创建 GitHub Release（根据提交生成变更日志）。
 
 ## 许可证
 
