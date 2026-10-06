@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>梦溪畅谈 · 设置</title>
+<style>
+:root{--xi:#2e6e63;--xi-dark:#225048;--ink:#22312e;--paper:#f7f5ef;--line:#e3ded2;--accent:#b5542d;--muted:#8a938f}
+*{margin:0;padding:0;box-sizing:border-box;font-family:"PingFang SC","Microsoft YaHei",sans-serif}
+body{background:var(--paper);color:var(--ink);padding:28px 5vw;display:flex;gap:22px;align-items:flex-start}
+nav{width:170px;position:sticky;top:28px}
+nav h1{font-family:"Songti SC",serif;color:var(--xi-dark);font-size:20px;margin-bottom:18px;letter-spacing:2px}
+nav a{display:block;padding:8px 12px;font-size:13px;color:var(--ink);text-decoration:none;border-radius:8px;margin-bottom:2px}
+nav a.on{background:var(--xi);color:#fff}
+main{flex:1;max-width:760px}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:18px}
+.card h3{font-size:15px;margin-bottom:12px;color:var(--xi-dark)}
+.item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+.item:last-child{border:none}
+.item .k{color:var(--muted);font-size:12px}
+.switch{width:38px;height:21px;border-radius:21px;background:#ccc;cursor:pointer;position:relative;transition:.2s}
+.switch::after{content:"";position:absolute;width:17px;height:17px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.2s}
+.switch.on{background:var(--xi)}.switch.on::after{left:19px}
+.swatches{display:flex;gap:8px}
+.sw{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent}
+.sw.sel{border-color:var(--ink)}
+input[type=text],input[type=password]{padding:7px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;width:220px;background:var(--paper)}
+.btn{font-size:12px;border:1px solid var(--line);background:#fff;border-radius:6px;padding:5px 12px;cursor:pointer;margin-left:8px}
+.btn.primary{background:var(--xi);color:#fff;border-color:var(--xi)}
+.warn{background:#fff6ec;border:1px solid #ecc9a8;color:#8a5a22;font-size:12px;padding:9px 13px;border-radius:8px;margin-top:10px}
+.codes{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.code{font-family:ui-monospace,monospace;font-size:13px;background:var(--paper);border:1px dashed var(--line);border-radius:6px;padding:6px 10px}
+</style>
+</head>
+<body>
+<nav>
+  <h1>梦溪畅谈</h1>
+  <a class="on">🔑 主密钥</a>
+  <a>👤 账户</a>
+  <a>📊 我的用量</a>
+  <a>🎨 外观</a>
+  <a>🔔 通知</a>
+</nav>
+<main>
+  <div class="card">
+    <h3>主密钥（档 A · 口令派生）</h3>
+    <div class="item"><div>状态<br><span class="k">KEK 由管理员口令经 Argon2id 派生，服务重启后需解锁</span></div><span style="color:#3a7a3a;font-weight:600">✅ 已解锁</span></div>
+    <div class="item"><div>恢复码<br><span class="k">一次性使用，使用后全部旧码作废并重新生成</span></div><span>剩余 <b>7 / 8</b></span></div>
+    <div class="item"><div>锁定阈值<br><span class="k">连续输错口令达到次数后临时锁定</span></div><span>5 次</span></div>
+  </div>
+
+  <div class="card">
+    <h3>解锁 / 重置口令</h3>
+    <div class="item"><div><input type="password" placeholder="输入主口令以解锁或验证"></div><button class="btn primary">解锁</button></div>
+    <div class="item"><div><input type="text" placeholder="或使用恢复码（XXXX-XXXX-XXXX）"></div><button class="btn primary">使用恢复码重置</button></div>
+    <div class="warn">⚠ 恢复码与主口令均无法找回——遗忘且恢复码全部失效时，所有加密数据（API Key、对话记录）将<b>永久不可恢复</b>。请离线备份恢复码。</div>
+    <div class="codes"><span class="code">KQ7T-2M9X-PL4D</span><span class="code">8R3F-VB2N-W6HJ</span><span class="code">…（仅展示一次，点击复制）</span></div>
+  </div>
+
+  <div class="card">
+    <h3>对话加密</h3>
+    <div class="item"><div>服务端静态加密<br><span class="k">AES-256-GCM · 按用户独立内容密钥 · 每消息独立 IV</span></div><div class="switch on"></div></div>
+    <div class="item"><div>加密会话全文搜索<br><span class="k">基于 HMAC 盲索引，存在短词频率泄露风险</span></div><div class="switch"></div></div>
+  </div>
+
+  <div class="card">
+    <h3>外观（个人偏好，管理员可设全局默认）</h3>
+    <div class="item"><div>主题色</div><div class="swatches"><div class="sw sel" style="background:#2e6e63"></div><div class="sw" style="background:#3a5f8a"></div><div class="sw" style="background:#8a5a3a"></div><div class="sw" style="background:#6a4a8a"></div></div></div>
+    <div class="item"><div>深色模式</div><div class="switch"></div></div>
+    <div class="item"><div>侧边栏宽度</div><span style="font-size:12px;color:var(--muted)">260px（滑杆调节）</span></div>
+  </div>
+</main>
+</body>
+</html>

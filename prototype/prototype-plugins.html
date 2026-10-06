@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>梦溪畅谈 · 插件管理</title>
+<style>
+:root{--xi:#2e6e63;--xi-dark:#225048;--ink:#22312e;--paper:#f7f5ef;--line:#e3ded2;--accent:#b5542d;--muted:#8a938f}
+*{margin:0;padding:0;box-sizing:border-box;font-family:"PingFang SC","Microsoft YaHei",sans-serif}
+body{background:var(--paper);color:var(--ink);padding:28px 5vw}
+h1{font-family:"Songti SC",serif;color:var(--xi-dark);font-size:22px;letter-spacing:2px}
+.sub{font-size:12px;color:var(--muted);margin:4px 0 20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px}
+.card h3{font-size:15px;display:flex;align-items:center;gap:8px}
+.card .desc{font-size:12px;color:var(--muted);margin:8px 0 12px;line-height:1.6}
+.tag{font-size:11px;padding:2px 9px;border-radius:12px}
+.tag.global{background:#fdeee6;color:var(--accent)}
+.tag.optional{background:#e6f0ed;color:var(--xi-dark)}
+.perm{font-size:11px;color:var(--muted);background:var(--paper);border-radius:6px;padding:6px 9px;margin-bottom:12px}
+.perm b{color:var(--ink);font-weight:500}
+.row{display:flex;align-items:center;justify-content:space-between;font-size:12px}
+.switch{width:38px;height:21px;border-radius:21px;background:#ccc;cursor:pointer;position:relative;transition:.2s}
+.switch::after{content:"";position:absolute;width:17px;height:17px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.2s}
+.switch.on{background:var(--xi)}
+.switch.on::after{left:19px}
+.switch.lock{opacity:.55;cursor:not-allowed}
+.pri{font-size:11px;color:var(--muted)}
+h2{font-size:14px;color:var(--xi-dark);margin:22px 0 12px}
+select{padding:5px 9px;border:1px solid var(--line);border-radius:6px;font-size:12px;background:#fff}
+</style>
+</head>
+<body>
+<h1>梦溪畅谈 · 插件管理</h1>
+<p class="sub">全局插件对所有用户强制生效 · 可选插件的生效优先级：全局 &gt; 用户组 &gt; 个人 &gt; 默认状态</p>
+
+<h2>🔴 全局插件（强制生效，用户不可禁用）</h2>
+<div class="grid">
+  <div class="card">
+    <h3>🛡 敏感词过滤 <span class="tag global">全局</span></h3>
+    <p class="desc">对输入输出进行合规过滤，管理员维护词库。</p>
+    <div class="perm">权限声明：<b>无网络 / 无文件</b> · 超时 5s · 内存 64MB</div>
+    <div class="row"><span class="pri">所有会话自动加载</span><div class="switch on lock"></div></div>
+  </div>
+</div>
+
+<h2>🟢 可选插件（用户可启停，管理员设默认）</h2>
+<div class="grid">
+  <div class="card">
+    <h3>🌐 联网搜索 <span class="tag optional">可选</span></h3>
+    <p class="desc">调用搜索引擎补充实时信息，结果以不可信内容注入对话。</p>
+    <div class="perm">权限声明：<b>http:outbound(仅 search.*)</b> · 超时 10s · 内存 128MB</div>
+    <div class="row"><span class="pri">默认：禁用</span><div class="switch on"></div></div>
+  </div>
+  <div class="card">
+    <h3>💻 代码执行器 <span class="tag optional">可选</span></h3>
+    <p class="desc">在隔离子进程中运行 Python 代码片段，返回执行结果。</p>
+    <div class="perm">权限声明：<b>subprocess · 只读文件系统 · 无网络</b> · 超时 10s · 内存 128MB</div>
+    <div class="row"><span class="pri">默认：禁用</span><div class="switch"></div></div>
+  </div>
+  <div class="card">
+    <h3>📄 文档解析 <span class="tag optional">可选</span></h3>
+    <p class="desc">解析 PDF / DOCX 附件供对话引用。</p>
+    <div class="perm">权限声明：<b>fs:read(仅上传目录)</b> · 超时 20s · 内存 256MB</div>
+    <div class="row"><span class="pri">默认：启用（组配置）</span><div class="switch on"></div></div>
+  </div>
+</div>
+
+<h2>👥 用户组批量配置</h2>
+<div class="card" style="max-width:560px">
+  <div class="row" style="margin-bottom:10px"><span>用户组：</span><select><option>研发组</option><option>运营组</option><option>默认组</option></select></div>
+  <div class="row" style="margin-bottom:8px"><span>🌐 联网搜索 → 组内默认启用</span><div class="switch on"></div></div>
+  <div class="row" style="margin-bottom:8px"><span>💻 代码执行器 → 组内默认禁用</span><div class="switch"></div></div>
+  <div class="row"><span>📄 文档解析 → 组内默认启用</span><div class="switch on"></div></div>
+</div>
+</body>
+</html>

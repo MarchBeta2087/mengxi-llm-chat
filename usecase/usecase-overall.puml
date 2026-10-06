@@ -1,0 +1,63 @@
+@startuml 梦溪畅谈-整体用例图
+left to right direction
+skinparam usecase {
+  BackgroundColor #f7f5ef
+  BorderColor #2e6e63
+}
+actor "匿名用户" as anon
+actor "普通用户" as user
+actor "管理员" as admin
+anon <|-- user
+user <|-- admin
+
+rectangle "梦溪畅谈 (mengxi-llm-talk)" {
+
+  usecase "注册 / 登录" as auth
+  usecase "流式聊天 (SSE)" as chat
+  usecase "经由公有Key转发" as viaPub
+  usecase "管理私有Key" as privKey
+  usecase "设置六维限流" as rate
+  usecase "测试Key连通性" as test
+  usecase "自定义界面" as theme
+  usecase "管理可选插件" as myplug
+  usecase "搜索历史会话" as search
+  usecase "管理会话(建/删/归档)" as conv
+
+  usecase "配置公有Key" as pubKey
+  usecase "管理插件(全局/可选)" as admplug
+  usecase "用户组批量配置" as group
+  usecase "设置用户/组日配额" as quota
+  usecase "查看审计日志" as audit
+  usecase "管理用户(封禁)" as usr
+  usecase "解锁主密钥" as unlock
+  usecase "生成/轮换恢复码" as recover
+
+}
+
+anon --> auth
+anon --> chat
+user --> chat
+user --> privKey
+user --> myplug
+user --> theme
+user --> search
+user --> conv
+
+admin --> pubKey
+admin --> admplug
+admin --> group
+admin --> quota
+admin --> audit
+admin --> usr
+admin --> unlock
+admin --> recover
+
+chat ..> viaPub : <<extend>>\n(无私有Key或回退时)
+privKey ..> rate : <<include>>
+privKey ..> test : <<extend>>
+viaPub ..> audit : <<include>>
+chat ..> audit : <<include>>
+
+note right of privKey : AES-256-GCM加密存储\nSSRF校验\n仅owner可见
+note bottom of chat : 私有Key优先调度\n熔断与回退(前端弹窗提示)
+@enduml

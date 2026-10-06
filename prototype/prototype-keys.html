@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>梦溪畅谈 · 密钥管理</title>
+<style>
+:root{--xi:#2e6e63;--xi-dark:#225048;--ink:#22312e;--paper:#f7f5ef;--line:#e3ded2;--accent:#b5542d;--muted:#8a938f}
+*{margin:0;padding:0;box-sizing:border-box;font-family:"PingFang SC","Microsoft YaHei",sans-serif}
+body{background:var(--paper);color:var(--ink);padding:28px 5vw}
+h1{font-family:"Songti SC",serif;color:var(--xi-dark);font-size:22px;letter-spacing:2px}
+.sub{font-size:12px;color:var(--muted);margin:4px 0 20px}
+.tabs{display:flex;gap:4px;margin-bottom:16px}
+.tab{padding:8px 18px;font-size:13px;border:1px solid var(--line);background:#fff;cursor:pointer;border-radius:8px 8px 0 0}
+.tab.on{background:var(--xi);color:#fff;border-color:var(--xi)}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:18px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 10px;color:var(--muted);font-weight:500;border-bottom:2px solid var(--line);white-space:nowrap}
+td{padding:10px;border-bottom:1px solid var(--line);white-space:nowrap}
+tr:hover td{background:#faf8f1}
+.tag{font-size:11px;padding:2px 8px;border-radius:12px}
+.tag.pub{background:var(--bubble-user,#e6f0ed);color:var(--xi-dark);background:#e6f0ed}
+.tag.priv{background:#fdeee6;color:var(--accent)}
+.tag.ok{background:#e6f0e6;color:#3a7a3a}
+.tag.off{background:#eee;color:#999}
+.btn{font-size:12px;border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;margin-right:4px}
+.btn.primary{background:var(--xi);color:#fff;border-color:var(--xi)}
+.btn:hover{border-color:var(--xi);color:var(--xi)}
+.btn.primary:hover{background:var(--xi-dark)}
+form{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;font-size:13px}
+form label{display:block;color:var(--muted);margin-bottom:4px;font-size:12px}
+form input,form select{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:var(--paper)}
+form .full{grid-column:1/-1}
+.rl{display:flex;gap:6px}
+.rl input{width:52px;text-align:center}
+.notice{background:#fff6ec;border:1px solid #ecc9a8;color:#8a5a22;font-size:12px;padding:9px 13px;border-radius:8px;margin-bottom:14px}
+.mk{display:flex;gap:24px;font-size:13px}
+.mk div b{display:block;font-size:12px;color:var(--muted);margin-bottom:3px;font-weight:500}
+.mk .val{font-size:15px;color:var(--xi-dark);font-weight:600}
+</style>
+</head>
+<body>
+<h1>梦溪畅谈 · 密钥管理</h1>
+<p class="sub">所有 Key 均以 AES-256-GCM 加密存储 · 界面仅显示脱敏形式（sk-...xxxx）</p>
+
+<div class="card mk">
+  <div><b>主密钥状态</b><span class="val">✅ 已解锁（档 A）</span></div>
+  <div><b>加密算法</b><span class="val">AES-256-GCM</span></div>
+  <div><b>恢复码剩余</b><span class="val">7 / 8</span></div>
+  <div><b>最近轮换</b><span class="val">2026-09-30</span></div>
+  <div><button class="btn">重新生成恢复码</button></div>
+</div>
+
+<div class="tabs"><div class="tab on">公有 Key（管理员）</div><div class="tab">私有 Key（仅本人可见）</div></div>
+
+<div class="card">
+<table>
+<tr><th>名称</th><th>Key</th><th>Base URL</th><th>模型</th><th>RPM</th><th>RPH</th><th>RPD</th><th>TPM</th><th>TPH</th><th>TPD</th><th>状态</th><th>操作</th></tr>
+<tr><td>官方主通道</td><td>sk-...4a2f</td><td>api.openai.com</td><td>gpt-4o, gpt-4o-mini</td><td>60</td><td>3000</td><td>10000</td><td>150k</td><td>2M</td><td>10M</td><td><span class="tag ok">正常</span></td>
+<td><button class="btn">测试</button><button class="btn">编辑</button><button class="btn">停用</button></td></tr>
+<tr><td>备用·DeepSeek</td><td>sk-...9c1d</td><td>api.deepseek.com</td><td>deepseek-*</td><td>不限</td><td>不限</td><td>5000</td><td>—</td><td>—</td><td>4M</td><td><span class="tag ok">正常</span></td>
+<td><button class="btn">测试</button><button class="btn">编辑</button><button class="btn">停用</button></td></tr>
+<tr><td>旧通道</td><td>sk-...77be</td><td>api.openai.com</td><td>gpt-3.5-turbo</td><td>3</td><td>60</td><td>200</td><td>—</td><td>—</td><td>—</td><td><span class="tag off">已熔断</span></td>
+<td><button class="btn">探测恢复</button><button class="btn">删除</button></td></tr>
+</table>
+</div>
+
+<div class="card">
+<h1 style="font-size:16px;margin-bottom:12px">＋ 添加 Key</h1>
+<form>
+  <div><label>展示名</label><input placeholder="如：我的 Claude"></div>
+  <div><label>API Key</label><input placeholder="sk-..." type="password"></div>
+  <div><label>Base URL</label><input placeholder="https://api.openai.com/v1"></div>
+  <div><label>模型</label><input placeholder="gpt-4o 或 claude-*"></div>
+  <div><label>RPM</label><input placeholder="不限"></div>
+  <div><label>RPH</label><input placeholder="不限"></div>
+  <div><label>RPD</label><input placeholder="不限"></div>
+  <div><label>TPM / TPH / TPD</label><input placeholder="不限"></div>
+  <div class="full"><button class="btn primary" type="button">保存（将通过 SSRF 安全校验）</button></div>
+</form>
+</div>
+
+<div class="notice">💡 提示：Base URL 将自动校验安全性——内网、回环、链路本地地址（如 169.254.169.254）会被拒绝，重定向也会逐跳检查。</div>
+</body>
+</html>

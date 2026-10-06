@@ -1,0 +1,44 @@
+@startuml 梦溪畅谈-密钥管理用例图
+left to right direction
+actor "普通用户" as user
+actor "管理员" as admin
+user <|-- admin
+
+rectangle "密钥管理子系统" {
+  usecase "新增Key" as add
+  usecase "SSRF安全校验" as ssrf
+  usecase "AES-GCM加密落库" as enc
+  usecase "编辑/启停/删除" as edit
+  usecase "配置六维限流" as rate
+  usecase "连通性测试" as test
+  usecase "脱敏展示(sk-...xxxx)" as mask
+
+  usecase "配置公有Key" as pub
+  usecase "密钥调度(私有优先)" as sched
+  usecase "配额感知加权轮询" as wrr
+  usecase "熔断与自动恢复" as cb
+  usecase "失败回退(可选)" as fb
+  usecase "审计记录" as audit
+}
+
+user --> add
+user --> edit
+user --> rate
+user --> test
+user --> mask
+
+admin --> pub
+admin --> add
+
+add ..> ssrf : <<include>>
+add ..> enc : <<include>>
+pub ..> enc : <<include>>
+
+sched ..> wrr : <<include>>
+sched ..> cb : <<include>>
+sched ..> fb : <<extend>>
+sched ..> audit : <<include>>
+
+note right of ssrf : 拒绝内网/回环/链路本地地址\n连接时校验对端IP(防DNS重绑定)\n重定向逐跳复检
+note bottom of enc : KEK(Argon2id派生)加密DEK\nDEK加密各Key, 每记录独立IV
+@enduml

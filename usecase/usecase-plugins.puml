@@ -1,0 +1,35 @@
+@startuml 梦溪畅谈-插件系统用例图
+left to right direction
+actor "普通用户" as user
+actor "管理员" as admin
+user <|-- admin
+
+rectangle "插件系统" {
+  usecase "上传插件" as upload
+  usecase "编写Manifest\n(权限声明/资源限制)" as manifest
+  usecase "设为全局插件(强制)" as gplug
+  usecase "设置默认状态(启用/禁用)" as defstate
+  usecase "按用户组批量配置" as group
+  usecase "启用/禁用可选插件" as toggle
+
+  usecase "沙箱内运行插件" as sandbox
+  usecase "超时/内存强制限制" as limit
+  usecase "越权调用拦截" as intercept
+  usecase "返回值不可信标记" as untrust
+}
+
+admin --> upload
+admin --> manifest
+admin --> gplug
+admin --> defstate
+admin --> group
+user --> toggle
+
+toggle ..> sandbox : <<include>>
+sandbox ..> limit : <<include>>
+sandbox ..> intercept : <<include>>
+sandbox ..> untrust : <<include>>
+
+note right of sandbox : 独立子进程/WASM\n与主进程内存隔离\n无Key与对话明文访问权
+note bottom of group : 生效优先级:\n全局 > 用户组 > 个人 > 默认状态
+@enduml
