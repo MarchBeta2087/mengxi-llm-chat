@@ -57,7 +57,7 @@ jobs:
 
       - name: Backend image metadata
         id: meta-backend
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.OWNER }}/mengxi-llm-chat-backend
           tags: |
@@ -78,7 +78,7 @@ jobs:
 
       - name: Frontend image metadata
         id: meta-frontend
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.OWNER }}/mengxi-llm-chat-frontend
           tags: |
