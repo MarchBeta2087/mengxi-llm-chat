@@ -802,7 +802,7 @@ services:
     command: redis-server --appendonly yes
   postgres:
     image: postgres:18-alpine
-    volumes: [pgdata:/var/lib/postgresql/data]
+    volumes: [pgdata:/var/lib/postgresql]
     environment:
       POSTGRES_DB: mengxi
 volumes: { pgdata: {} }
