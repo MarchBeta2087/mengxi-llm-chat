@@ -42,6 +42,12 @@ class Settings(BaseSettings):
     # --- 存储 ---
     database_url: str = "postgresql+asyncpg://mengxi:mengxi@localhost:5432/mengxi"
     redis_url: str = "redis://localhost:6379/0"
+    auto_create_tables: bool = False  # 仅开发/测试；生产用 Alembic
+
+    # --- 会话 ---
+    session_secret: str = "dev-insecure-change-me"
+    session_cookie: str = "mengxi_session"
+    session_max_age: int = 60 * 60 * 24 * 7  # 7 天
 
     # --- 策略 ---
     allow_anonymous: bool = False

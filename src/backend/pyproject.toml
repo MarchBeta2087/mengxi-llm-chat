@@ -18,6 +18,8 @@ dependencies = [
     "cryptography>=43.0",
     "argon2-cffi>=23.1",
     "cachetools>=5.3",
+    "itsdangerous>=2.2",
+    "greenlet>=3.0",
     "python-multipart>=0.0.9",
 ]
 
@@ -25,6 +27,8 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
+    "aiosqlite>=0.20",
+    "fakeredis[lua]>=2.26",
     "ruff>=0.7",
     "mypy>=1.11",
 ]
@@ -48,3 +52,5 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+# FastAPI 依赖注入惯用 `param = Depends(...)`，B008 属误报
+ignore = ["B008"]

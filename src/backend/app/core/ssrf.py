@@ -13,7 +13,8 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import socket
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from urllib.parse import urlsplit, urlunsplit
 
@@ -237,3 +238,22 @@ class SafeHttpClient:
             return resp
 
         raise SsrfRejected("重定向次数超限")
+
+    @asynccontextmanager
+    async def stream(self, method: str, url: str, **kwargs) -> AsyncIterator[object]:
+        """流式请求（不跟随重定向，适合 SSE）；进入上下文前已完成 SSRF 校验。"""
+        target = await validate_url(url, self.policy, resolver=self.resolver)
+        headers = dict(kwargs.pop("headers", {}) or {})
+        headers.setdefault("Host", host_header(target))
+        extensions = dict(kwargs.pop("extensions", {}) or {})
+        if target.scheme == "https":
+            extensions.setdefault("sni_hostname", target.host)
+
+        async with self._get_client().stream(
+            method,
+            pinned_url(target),
+            headers=headers,
+            extensions=extensions,
+            **kwargs,
+        ) as response:
+            yield response
