@@ -1,4 +1,20 @@
+name: mengxi
+
 services:
+  # 数据库迁移（一次性）：执行 Alembic 后退出
+  migrate:
+    build: ../backend
+    command: ["alembic", "upgrade", "head"]
+    env_file:
+      - ../backend/.env
+    environment:
+      MENGXI_DATABASE_URL: postgresql+asyncpg://mengxi:mengxi@postgres:5432/mengxi
+      MENGXI_DATA_DIR: /data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   app:
     build: ../backend
     restart: unless-stopped
@@ -8,16 +24,25 @@ services:
       MENGXI_DATABASE_URL: postgresql+asyncpg://mengxi:mengxi@postgres:5432/mengxi
       MENGXI_REDIS_URL: redis://redis:6379/0
       MENGXI_DATA_DIR: /data
-    ports:
-      - "8000:8000"
     volumes:
-      - ./data/keys:/data/keys:rw        # DEK 密文（档 A/B），权限 600
-      - ../plugins:/data/plugins:ro       # 插件包只读挂载给沙箱
+      # KEK/DEK 密文与插件包（plugins 子目录）
+      - ./data:/data
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_started
+      migrate:
+        condition: service_completed_successfully
+
+  # 前端 + 反向代理（托管 SPA，/api 反代到 app）
+  web:
+    build: ../frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - app
 
   redis:
     image: redis:7-alpine
@@ -32,7 +57,7 @@ services:
     environment:
       POSTGRES_DB: mengxi
       POSTGRES_USER: mengxi
-      POSTGRES_PASSWORD: mengxi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mengxi}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
