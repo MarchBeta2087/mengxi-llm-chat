@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 
 interface MockState {
   authed: boolean
+  role?: 'user' | 'admin'
 }
 
 const USER = { id: 'u1', username: 'alice', role: 'user', status: 'active' }
@@ -19,7 +20,7 @@ async function mockApi(page: Page, state: MockState): Promise<void> {
       })
 
     if (path === '/api/auth/me') {
-      if (state.authed) return ok(USER)
+      if (state.authed) return ok({ ...USER, role: state.role ?? 'user' })
       return route.fulfill({
         status: 401,
         contentType: 'application/json',
@@ -55,6 +56,22 @@ async function mockApi(page: Page, state: MockState): Promise<void> {
         body: sse,
       })
     }
+    if (path === '/api/admin/users') {
+      return ok([
+        {
+          id: 'u1',
+          username: 'alice',
+          role: 'admin',
+          status: 'active',
+          daily_quota_tokens: 0,
+          group_id: null,
+        },
+      ])
+    }
+    if (path === '/api/admin/groups') return ok([])
+    if (path === '/api/admin/plugins') return ok([])
+    if (path === '/api/admin/kek') return ok({ profile: 'B', state: 'unlocked' })
+    if (path === '/api/admin/recovery-codes') return ok({ remaining: 8 })
     return ok({})
   })
 }
@@ -100,4 +117,16 @@ test('可退出登录', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: '梦溪畅谈' })).toBeVisible()
   await expect(page.getByLabel('用户名')).toBeVisible()
+})
+
+test('管理员可访问管理后台各标签', async ({ page }) => {
+  const state: MockState = { authed: true, role: 'admin' }
+  await mockApi(page, state)
+
+  await page.goto('/admin')
+  await expect(page.getByRole('button', { name: '公有 Key' })).toBeVisible()
+  await expect(page.getByRole('columnheader', { name: '日配额' })).toBeVisible()
+
+  await page.getByRole('button', { name: '插件' }).click()
+  await expect(page.getByRole('heading', { name: '已安装插件' })).toBeVisible()
 })

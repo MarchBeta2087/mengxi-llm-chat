@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { ApiError, api, streamChat } from '../api/client'
-import type { Conversation, Message } from '../api/types'
+import type { Conversation, Message, SearchHit } from '../api/types'
 
 const conversations = ref<Conversation[]>([])
 const current = ref<Conversation | null>(null)
@@ -12,8 +12,12 @@ const input = ref('')
 const streaming = ref(false)
 const error = ref('')
 
+const query = ref('')
+const hits = ref<SearchHit[]>([])
+const showArchived = ref(false)
+
 async function loadConversations() {
-  conversations.value = await api.listConversations()
+  conversations.value = await api.listConversations(showArchived.value)
 }
 
 async function openConversation(conversation: Conversation) {
@@ -29,6 +33,24 @@ async function newConversation() {
   messages.value = []
 }
 
+async function renameConversation(conversation: Conversation) {
+  const title = prompt('重命名会话', conversation.title)
+  if (!title || title === conversation.title) return
+  await api.updateConversation(conversation.id, { title })
+  await loadConversations()
+  if (current.value?.id === conversation.id) current.value.title = title
+}
+
+async function toggleArchive(conversation: Conversation) {
+  const archived = !conversation.archived
+  await api.updateConversation(conversation.id, { archived })
+  if (current.value?.id === conversation.id && archived) {
+    current.value = null
+    messages.value = []
+  }
+  await loadConversations()
+}
+
 async function removeConversation(conversation: Conversation) {
   if (!confirm(`删除会话「${conversation.title}」？`)) return
   await api.deleteConversation(conversation.id)
@@ -37,6 +59,29 @@ async function removeConversation(conversation: Conversation) {
     messages.value = []
   }
   await loadConversations()
+}
+
+async function runSearch() {
+  const q = query.value.trim()
+  if (!q) {
+    hits.value = []
+    return
+  }
+  hits.value = await api.searchConversations(q)
+}
+
+function clearSearch() {
+  query.value = ''
+  hits.value = []
+}
+
+async function openHit(hit: SearchHit) {
+  const list = await api.listConversations(true)
+  const conversation = list.find((item) => item.id === hit.conversation_id)
+  if (conversation) {
+    await openConversation(conversation)
+    clearSearch()
+  }
 }
 
 async function send() {
@@ -87,6 +132,25 @@ onMounted(async () => {
   <div class="chat">
     <aside class="convs">
       <button class="btn primary new-btn" @click="newConversation">＋ 新会话</button>
+
+      <input
+        v-model="query"
+        class="search"
+        placeholder="搜索会话/消息（Enter）"
+        @keyup.enter="runSearch"
+        @input="!query && clearSearch()"
+      />
+
+      <div v-if="hits.length" class="list results">
+        <div v-for="(hit, i) in hits" :key="i" class="conv result" @click="openHit(hit)">
+          <span class="title">{{ hit.snippet || hit.title }}</span>
+        </div>
+      </div>
+
+      <label class="arch">
+        <input v-model="showArchived" type="checkbox" @change="loadConversations" /> 显示归档
+      </label>
+
       <div class="list">
         <div
           v-for="conversation in conversations"
@@ -97,7 +161,16 @@ onMounted(async () => {
         >
           <span class="title">{{ conversation.title }}</span>
           <span v-if="conversation.encrypted" title="已加密存储">🔒</span>
-          <button class="del" title="删除" @click.stop="removeConversation(conversation)">✕</button>
+          <span v-if="conversation.archived" class="tag off">归档</span>
+          <button class="act" title="重命名" @click.stop="renameConversation(conversation)">✎</button>
+          <button
+            class="act"
+            :title="conversation.archived ? '取消归档' : '归档'"
+            @click.stop="toggleArchive(conversation)"
+          >
+            {{ conversation.archived ? '↩' : '📦' }}
+          </button>
+          <button class="act" title="删除" @click.stop="removeConversation(conversation)">✕</button>
         </div>
       </div>
     </aside>
@@ -151,14 +224,34 @@ onMounted(async () => {
 .new-btn {
   margin-bottom: 10px;
 }
+.search {
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  margin-bottom: 8px;
+}
+.arch {
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px 6px;
+}
 .list {
   overflow-y: auto;
+}
+.results {
+  border-bottom: 1px dashed var(--line);
+  margin-bottom: 6px;
+  padding-bottom: 6px;
 }
 .conv {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 9px 10px;
+  gap: 4px;
+  padding: 8px 8px;
   border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
@@ -171,19 +264,24 @@ onMounted(async () => {
   color: var(--xi-dark);
   font-weight: 600;
 }
+.conv.result .title {
+  color: var(--muted);
+  font-size: 12px;
+}
 .title {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.del {
+.act {
   border: none;
   background: none;
   color: var(--muted);
   opacity: 0;
+  padding: 0 2px;
 }
-.conv:hover .del {
+.conv:hover .act {
   opacity: 1;
 }
 .main {

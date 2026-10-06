@@ -1,4 +1,14 @@
-import type { ApiKey, Conversation, Message, Plugin, SearchHit, User } from './types'
+import type {
+  AdminPlugin,
+  ApiKey,
+  Conversation,
+  GroupPluginEntry,
+  KekStatus,
+  Message,
+  Plugin,
+  SearchHit,
+  User,
+} from './types'
 
 const BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? ''
 
@@ -108,9 +118,63 @@ export const api = {
       body: JSON.stringify({ name, daily_quota_tokens: dailyQuota }),
     }),
   adminAudit: (params = '') => request<Record<string, unknown>[]>(`/api/admin/audit${params}`),
-  adminKek: () => request<Record<string, unknown>>('/api/admin/kek'),
-  adminRecoveryStatus: () =>
-    request<{ remaining: number }>('/api/admin/recovery-codes'),
+  adminKek: () => request<KekStatus>('/api/admin/kek'),
+  adminKekInitialize: (passphrase: string) =>
+    request<KekStatus>('/api/admin/kek/initialize', {
+      method: 'POST',
+      body: JSON.stringify({ passphrase }),
+    }),
+  adminKekUnlock: (passphrase: string) =>
+    request<KekStatus>('/api/admin/kek/unlock', {
+      method: 'POST',
+      body: JSON.stringify({ passphrase }),
+    }),
+  adminKekLock: () => request<KekStatus>('/api/admin/kek/lock', { method: 'POST' }),
+  adminRecoveryStatus: () => request<{ remaining: number }>('/api/admin/recovery-codes'),
+  adminRecoveryRegenerate: () =>
+    request<{ codes: string[] }>('/api/admin/recovery-codes/regenerate', { method: 'POST' }),
+  adminRecoveryUse: (code: string, newPassphrase: string) =>
+    request<{ codes: string[] }>('/api/admin/recovery-codes/use', {
+      method: 'POST',
+      body: JSON.stringify({ code, new_passphrase: newPassphrase }),
+    }),
+
+  // 管理端：公有 Key（复用 keys 接口）
+  listPublicKeys: () => request<ApiKey[]>('/api/keys?pool=public'),
+  createPublicKey: (payload: Record<string, unknown>) =>
+    request<ApiKey>('/api/keys', {
+      method: 'POST',
+      body: JSON.stringify({ ...payload, is_public: true }),
+    }),
+
+  // 管理端：插件
+  adminListPlugins: () => request<AdminPlugin[]>('/api/admin/plugins'),
+  adminInstallPlugin: (manifest: Record<string, unknown>, code: string) =>
+    request<AdminPlugin>('/api/admin/plugins', {
+      method: 'POST',
+      body: JSON.stringify({ manifest, code }),
+    }),
+  adminUpdatePlugin: (id: string, patch: Record<string, unknown>) =>
+    request<AdminPlugin>(`/api/admin/plugins/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+  adminInvokePlugin: (id: string, input: Record<string, unknown>) =>
+    request<{ output: string; logs: string[] }>(`/api/admin/plugins/${id}/invoke`, {
+      method: 'POST',
+      body: JSON.stringify({ input }),
+    }),
+  adminGroupPlugins: (groupId: string) =>
+    request<GroupPluginEntry[]>(`/api/admin/groups/${groupId}/plugins`),
+  adminSetGroupPlugin: (groupId: string, pluginId: string, state: 'enabled' | 'disabled') =>
+    request<GroupPluginEntry[]>(`/api/admin/groups/${groupId}/plugins/${pluginId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ state }),
+    }),
+  adminClearGroupPlugin: (groupId: string, pluginId: string) =>
+    request<GroupPluginEntry[]>(`/api/admin/groups/${groupId}/plugins/${pluginId}`, {
+      method: 'DELETE',
+    }),
 }
 
 /** 解析单个 SSE 块（event + data），失败返回 null。 */

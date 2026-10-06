@@ -4,12 +4,12 @@ import { useRouter } from 'vue-router'
 import { api } from '../api/client'
 import { useAuthStore } from '../stores/auth'
 import { useThemeStore } from '../stores/theme'
+import MasterKeyPanel from '../components/MasterKeyPanel.vue'
 
 const theme = useThemeStore()
 const auth = useAuthStore()
 const router = useRouter()
 const audit = ref<Record<string, unknown>[]>([])
-const kek = ref<Record<string, unknown> | null>(null)
 
 async function logout() {
   await auth.logout()
@@ -18,13 +18,6 @@ async function logout() {
 
 onMounted(async () => {
   audit.value = await api.myAudit(50)
-  if (auth.isAdmin()) {
-    try {
-      kek.value = await api.adminKek()
-    } catch {
-      /* 忽略 */
-    }
-  }
 })
 </script>
 
@@ -79,13 +72,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div v-if="auth.isAdmin() && kek" class="card">
-      <h3>主密钥状态（管理员）</h3>
-      <p class="kv">档位：{{ kek.profile }} · 状态：{{ kek.state }}</p>
-      <p class="warn">
-        ⚠ 恢复码与主口令均无法找回；遗忘且恢复码全部失效时，所有加密数据将永久不可恢复，请离线备份恢复码。
-      </p>
-    </div>
+    <MasterKeyPanel v-if="auth.isAdmin()" />
 
     <div class="card">
       <h3>我的用量 / 审计</h3>
