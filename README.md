@@ -42,7 +42,7 @@
 - **前端**：Vue 3 + TypeScript + Vite + Pinia + Vue Router
 - **后端**：FastAPI + SQLAlchemy 2.0(async) + httpx + pydantic v2
 - **加密**：cryptography（AES-256-GCM、HKDF）+ argon2-cffi
-- **存储**：PostgreSQL 18（唯一官方支持）+ Redis 8
+- **存储**：PostgreSQL 17（唯一官方支持）+ Redis 8
 - **部署**：Docker Compose
 
 ## 快速开始

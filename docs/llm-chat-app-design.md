@@ -89,7 +89,7 @@
 | 后端 | Python 3.11+ / FastAPI + httpx + pydantic v2 + SQLAlchemy 2.0 (async) |
 | 加密 | cryptography（AES-256-GCM）+ argon2-cffi（Argon2id） |
 | 缓存/限流 | Redis 8（redis-py async） |
-| 数据库 | PostgreSQL 18（唯一官方支持） |
+| 数据库 | PostgreSQL 17（唯一官方支持） |
 | 迁移 | Alembic |
 | 部署 | Docker Compose（app + redis + postgres） |
 | 可观测 | prometheus-client（/metrics）+ 结构化日志 |
@@ -593,7 +593,7 @@ POST /api/chat/completions (SSE)
 
 ## 10. 数据模型设计
 
-### 10.1 表结构（PostgreSQL 18）
+### 10.1 表结构（PostgreSQL 17）
 
 ```sql
 CREATE TABLE users (
@@ -801,8 +801,8 @@ services:
     image: redis:8-alpine
     command: redis-server --appendonly yes
   postgres:
-    image: postgres:18-alpine
-    volumes: [pgdata:/var/lib/postgresql]
+    image: postgres:17-alpine
+    volumes: [pgdata:/var/lib/postgresql/data]
     environment:
       POSTGRES_DB: mengxi
 volumes: { pgdata: {} }

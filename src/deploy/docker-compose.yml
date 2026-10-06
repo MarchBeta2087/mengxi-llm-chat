@@ -52,14 +52,14 @@ services:
       - redisdata:/data
 
   postgres:
-    image: postgres:18-alpine
+    image: postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: mengxi
       POSTGRES_USER: mengxi
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mengxi}
     volumes:
-      - pgdata:/var/lib/postgresql
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mengxi -d mengxi"]
       interval: 10s
