@@ -1,5 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
 
+// 默认使用 Playwright 自带 chromium；本地无浏览器时可设 PW_CHANNEL=chrome|msedge 复用系统浏览器
+const channel = process.env.PW_CHANNEL as 'chrome' | 'msedge' | undefined
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 30_000,
@@ -11,7 +14,9 @@ export default defineConfig({
     baseURL: 'http://127.0.0.1:4173',
     trace: 'on-first-retry',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'], ...(channel ? { channel } : {}) } },
+  ],
   webServer: {
     command: 'pnpm preview',
     url: 'http://127.0.0.1:4173',
