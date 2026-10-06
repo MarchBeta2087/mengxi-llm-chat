@@ -80,6 +80,12 @@ class KekProvider(ABC):
     def is_unlocked(self) -> bool:
         return self._kek is not None
 
+    def install_kek(self, kek: bytes) -> None:
+        """直接安装 KEK（供恢复码流程在内存中临时使用）。"""
+        if len(kek) != cipher.KEY_LEN:
+            raise ValueError(f"KEK must be {cipher.KEY_LEN} bytes")
+        self._kek = kek
+
     def lock(self) -> None:
         self._kek = None
 
@@ -155,6 +161,16 @@ class LocalKekProvider(KekProvider):
             cipher.decrypt(key=kek, blob=verifier, aad=KEK_VERIFY_AAD)
         except CipherError as exc:
             raise WrongPassphrase("主口令错误") from exc
+        self._kek = kek
+
+    async def reinitialize(self, passphrase: str) -> None:
+        """用新口令重新派生 KEK 并覆盖盐/校验文件（恢复码重置流程使用）。"""
+        self.keys_dir.mkdir(parents=True, exist_ok=True)
+        salt = os.urandom(self.params.salt_len)
+        kek = self.params.derive(passphrase, salt)
+        verifier = cipher.encrypt(kek, VERIFIER_PLAINTEXT, key_gen=0, aad=KEK_VERIFY_AAD)
+        _atomic_write(self.salt_file, salt)
+        _atomic_write(self.verifier_file, verifier)
         self._kek = kek
 
 

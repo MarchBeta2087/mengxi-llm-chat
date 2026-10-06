@@ -15,6 +15,7 @@ from app.domain.ratelimit import RateLimitSpec
 from app.infra.sandbox import PluginSandbox
 from app.models.user import User
 from app.repositories import UserRepository
+from app.services.conversation import ConversationKeyCache, ConversationService
 from app.services.key_manager import KeyManager
 from app.services.ratelimit import CircuitBreaker, RateLimiter
 from app.services.scheduler import SchedulerService
@@ -63,6 +64,23 @@ def get_ip_rate_spec(request: Request) -> RateLimitSpec:
 
 def get_plugin_sandbox(request: Request) -> PluginSandbox:
     return request.app.state.plugin_sandbox
+
+
+def get_conversation_cache(request: Request) -> ConversationKeyCache:
+    return request.app.state.conversation_cache
+
+
+async def get_conversation_service(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    key_manager: KeyManager = Depends(get_key_manager),
+) -> ConversationService:
+    return ConversationService(
+        session,
+        key_manager,
+        request.app.state.conversation_cache,
+        search_enabled=request.app.state.settings.encrypted_search,
+    )
 
 
 async def get_current_user(
