@@ -26,6 +26,10 @@ apikeys/
 node_modules/
 dist/
 .vite/
+coverage/
+test-results/
+playwright-report/
+blob-report/
 
 # --- 编辑器 / 系统 ---
 .idea/

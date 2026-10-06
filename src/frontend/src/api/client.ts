@@ -113,6 +113,20 @@ export const api = {
     request<{ remaining: number }>('/api/admin/recovery-codes'),
 }
 
+/** 解析单个 SSE 块（event + data），失败返回 null。 */
+export function parseSseBlock(
+  block: string,
+): { event: string; data: Record<string, unknown> } | null {
+  const eventMatch = /^event:\s*(.*)$/m.exec(block)
+  const dataMatch = /^data:\s*(.*)$/m.exec(block)
+  if (!eventMatch || !dataMatch) return null
+  try {
+    return { event: eventMatch[1].trim(), data: JSON.parse(dataMatch[1]) }
+  } catch {
+    return null
+  }
+}
+
 /** 聊天：SSE 流式（fetch + ReadableStream）。 */
 export async function streamChat(
   payload: { model: string; messages: Message[]; conversation_id?: string | null },
@@ -144,14 +158,8 @@ export async function streamChat(
     const blocks = buffer.split('\n\n')
     buffer = blocks.pop() ?? ''
     for (const block of blocks) {
-      const eventMatch = /^event:\s*(.*)$/m.exec(block)
-      const dataMatch = /^data:\s*(.*)$/m.exec(block)
-      if (!eventMatch || !dataMatch) continue
-      try {
-        onEvent(eventMatch[1].trim(), JSON.parse(dataMatch[1]))
-      } catch {
-        /* 忽略无法解析的块 */
-      }
+      const parsed = parseSseBlock(block)
+      if (parsed) onEvent(parsed.event, parsed.data)
     }
   }
 }

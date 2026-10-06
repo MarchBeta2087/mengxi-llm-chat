@@ -1,0 +1,21 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mengxi-migrate
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: mengxi-migrate
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: ghcr.io/marchbeta2087/mengxi-llm-chat-backend:latest
+          command: ["alembic", "upgrade", "head"]
+          envFrom:
+            - configMapRef:
+                name: mengxi-config
+            - secretRef:
+                name: mengxi-secrets

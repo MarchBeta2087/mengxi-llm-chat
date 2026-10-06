@@ -13,7 +13,7 @@ const theme = useThemeStore()
     <nav class="rail">
       <div class="brand">
         <h1>梦溪畅谈</h1>
-        <p>mengxi-llm-talk</p>
+        <p>mengxi-llm-chat</p>
       </div>
       <RouterLink to="/" class="nav-link">💬 聊天</RouterLink>
       <RouterLink to="/keys" class="nav-link">🔑 我的 Key</RouterLink>

@@ -1,0 +1,117 @@
+name: Deploy (CD)
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "镜像 tag（如 v1.0.0 或 latest）"
+        required: true
+        default: latest
+      environment:
+        description: "目标环境"
+        type: choice
+        options: [production, staging]
+        default: production
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  deploy:
+    name: Deploy (digest-pinned, health-checked, auto-rollback)
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lowercase image owner
+        run: echo "OWNER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve image digests (pin)
+        id: digests
+        run: |
+          set -euo pipefail
+          backend="ghcr.io/${OWNER}/mengxi-llm-chat-backend:${{ inputs.image_tag }}"
+          frontend="ghcr.io/${OWNER}/mengxi-llm-chat-frontend:${{ inputs.image_tag }}"
+          bd="$(docker buildx imagetools inspect "$backend"  --format '{{json .Manifest.Digest}}' | tr -d '"')"
+          fd="$(docker buildx imagetools inspect "$frontend" --format '{{json .Manifest.Digest}}' | tr -d '"')"
+          echo "backend=$bd" >> "$GITHUB_OUTPUT"
+          echo "frontend=$fd" >> "$GITHUB_OUTPUT"
+          echo "backend digest: $bd"
+          echo "frontend digest: $fd"
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1
+        env:
+          MENGXI_IMAGE_TAG: ${{ inputs.image_tag }}
+          MENGXI_BACKEND_DIGEST: ${{ steps.digests.outputs.backend }}
+          MENGXI_FRONTEND_DIGEST: ${{ steps.digests.outputs.frontend }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          script_stop: true
+          envs: MENGXI_IMAGE_TAG,MENGXI_BACKEND_DIGEST,MENGXI_FRONTEND_DIGEST
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.DEPLOY_PATH }}"
+            STATE_FILE=.mengxi-deploy.env
+
+            prev_backend=""
+            prev_frontend=""
+            prev_tag=""
+            if [ -f "$STATE_FILE" ]; then
+              prev_backend="$(grep -E '^MENGXI_BACKEND_DIGEST=' "$STATE_FILE" | cut -d= -f2- || true)"
+              prev_frontend="$(grep -E '^MENGXI_FRONTEND_DIGEST=' "$STATE_FILE" | cut -d= -f2- || true)"
+              prev_tag="$(grep -E '^MENGXI_IMAGE_TAG=' "$STATE_FILE" | cut -d= -f2- || true)"
+            fi
+            echo "prev tag: ${prev_tag:-<none>}"
+
+            compose="docker compose -f docker-compose.ghcr.yml -f docker-compose.digest.yml"
+
+            echo "拉取并启动（digest 固定）..."
+            $compose pull
+            $compose up -d
+
+            echo "健康检查 ..."
+            healthy=0
+            for _ in $(seq 1 40); do
+              if curl -fsS http://127.0.0.1:8080/healthz >/dev/null 2>&1; then
+                healthy=1; break
+              fi
+              sleep 3
+            done
+
+            if [ "$healthy" = "1" ]; then
+              {
+                echo "MENGXI_IMAGE_TAG=$MENGXI_IMAGE_TAG"
+                echo "MENGXI_BACKEND_DIGEST=$MENGXI_BACKEND_DIGEST"
+                echo "MENGXI_FRONTEND_DIGEST=$MENGXI_FRONTEND_DIGEST"
+              } > "$STATE_FILE"
+              echo "✅ 部署成功（tag=$MENGXI_IMAGE_TAG）"
+              exit 0
+            fi
+
+            echo "❌ 健康检查失败"
+            $compose ps || true
+            $compose logs --tail=100 || true
+
+            if [ -n "$prev_backend" ] && [ -n "$prev_frontend" ]; then
+              echo "↩︎ 回滚到 tag=${prev_tag:-<unknown>}"
+              MENGXI_BACKEND_DIGEST="$prev_backend" \
+              MENGXI_FRONTEND_DIGEST="$prev_frontend" \
+              MENGXI_IMAGE_TAG="$prev_tag" \
+                $compose up -d
+            else
+              echo "无可回滚的上一个版本"
+            fi
+            exit 1

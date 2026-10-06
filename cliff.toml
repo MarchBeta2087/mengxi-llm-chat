@@ -1,0 +1,44 @@
+# git-cliff 配置：按 Conventional Commits 生成 CHANGELOG / Release Notes
+[changelog]
+header = """
+# 更新日志
+
+本项目的变更记录，遵循 [Keep a Changelog](https://keepachangelog.com/) 与
+[Conventional Commits](https://www.conventionalcommits.org/)。\n
+"""
+body = """
+{% if version %}\
+## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}
+{% else %}\
+## [未发布]
+{% endif %}\
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim }}
+{% for commit in commits %}\
+- {% if commit.scope %}**{{ commit.scope }}**: {% endif %}{{ commit.message | upper_first }}{% if commit.github.pr_number %} ([#{{ commit.github.pr_number }}](https://github.com/{{ remote.github.owner }}/{{ remote.github.repo }}/pull/{{ commit.github.pr_number }})){% endif %}
+{% endfor %}
+{% endfor %}\n
+"""
+footer = ""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = false
+protect_breaking_commits = false
+filter_commits = false
+tag_pattern = "v[0-9]*"
+sort_commits = "oldest"
+commit_parsers = [
+  { message = "^feat", group = "新增" },
+  { message = "^fix", group = "修复" },
+  { message = "^perf", group = "性能" },
+  { message = "^refactor", group = "重构" },
+  { message = "^docs", group = "文档" },
+  { message = "^test", group = "测试" },
+  { message = "^ci", group = "CI/CD" },
+  { message = "^build", group = "构建" },
+  { message = "^revert", group = "回滚" },
+  { message = "^chore", group = "杂项" },
+]

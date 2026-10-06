@@ -5,3 +5,5 @@ aiosqlite>=0.20
 fakeredis[lua]>=2.26
 ruff>=0.7
 mypy>=1.11
+pip-licenses>=4.3
+pip-audit>=2.7

@@ -1,8 +1,13 @@
-# pnpm v11 设置：允许 esbuild / vue-demi 运行构建脚本
+# pnpm v11 设置
 strictDepBuilds: false
 onlyBuiltDependencies:
   - esbuild
   - vue-demi
+
+# 安全：强制修复传递依赖中的已知漏洞（tinypool < 2.1.2 存在 critical 漏洞）
+overrides:
+  tinypool: ">=2.1.2"
+
 allowBuilds:
   esbuild: set this to true or false
   vue-demi: set this to true or false

@@ -1,6 +1,7 @@
-# 梦溪畅谈（mengxi-llm-talk）
+# 梦溪畅谈（mengxi-llm-chat）
 
 [![CI](https://github.com/MarchBeta2087/mengxi-llm-chat/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/MarchBeta2087/mengxi-llm-chat/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/MarchBeta2087/mengxi-llm-chat/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/MarchBeta2087/mengxi-llm-chat/actions/workflows/codeql.yml)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](./LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776ab.svg)](https://www.python.org/)
 [![Vue](https://img.shields.io/badge/vue-3-42b883.svg)](https://vuejs.org/)
@@ -86,9 +87,10 @@ pnpm dev                    # http://127.0.0.1:5173（/api 代理到 8000）
 ```
 .
 ├─ docs/                     # 文档（见下方索引）
+├─ deploy/k8s/               # Kubernetes（Kustomize）清单
 ├─ prototype/                # 界面原型（HTML）
 ├─ usecase/                  # PlantUML 用例图
-├─ .github/workflows/ci.yml  # CI：ruff + pytest + pnpm build + 镜像构建
+├─ .github/workflows/        # CI（ci.yml）与安全分析（codeql.yml）
 └─ src/
    ├─ backend/               # FastAPI 服务、迁移、测试、脚本
    ├─ frontend/              # Vue 3 SPA
@@ -104,6 +106,7 @@ pnpm dev                    # http://127.0.0.1:5173（/api 代理到 8000）
 | [可行性分析](docs/llm-chat-app-feasibility.md) | 技术/经济/法律/进度可行性 |
 | [设计说明书](docs/llm-chat-app-design.md) | 架构、模块、数据模型、接口、安全、测试 |
 | [部署与运维手册](docs/deployment-guide.md) | Compose 部署、TLS、备份恢复、升级、排障 |
+| [CI/CD 与持续交付指南](docs/cd-guide.md) | 变更日志(git-cliff)、镜像签名(cosign)、SSH CD、ArgoCD |
 | [使用自有密钥测试指南](docs/key-testing-guide.md) | 真钥 / 有效假钥 / 无效 base_url 三条路径 |
 | [插件系统说明书](docs/plugin-system-guide.md) | Manifest、权限、沙箱协议、优先级、开发指南 |
 
@@ -122,12 +125,58 @@ cd src/backend
 ruff check . && ruff format --check .
 pytest
 
-# 前端：构建
+# 前端：单测 + 覆盖率门禁 + 构建
 cd src/frontend
+pnpm test:coverage
 pnpm build
+
+# 前端 E2E（需先 pnpm exec playwright install chromium）
+pnpm exec playwright install chromium
+pnpm e2e
+
+# 全栈冒烟（Docker Compose 构建并健康检查，完成后自动清理）
+bash src/deploy/smoke.sh
 ```
 
-CI 会在 push / PR 时自动执行上述检查（见 `.github/workflows/ci.yml`）。
+CI 在 push / PR 时自动执行（`.github/workflows/ci.yml`）：
+
+| Job | 内容 |
+| --- | --- |
+| Backend | `ruff check` / `ruff format` / `pytest` / 许可证扫描（`pip-licenses`，阻止 GPL/AGPL）/ 漏洞审计（`pip-audit`） |
+| Frontend | `pnpm audit`（high+）/ `vitest` 单测 + **覆盖率门禁** / `pnpm build` |
+| Frontend E2E | Playwright（登录 + 流式聊天，API mock；初期非阻断） |
+| Compose smoke | 全栈构建 + `/healthz` 健康检查 |
+| K8s | `kustomize build deploy/k8s/overlays/production` 渲染校验 |
+| Trivy | 后端/前端镜像 CVE 扫描（CRITICAL/HIGH） |
+| SBOM | 生成 CycloneDX（后端 `cyclonedx-py`、前端 Syft）并上传产物 |
+
+CI 同时支持**每日定时全量运行**（`schedule`）与手动触发；安全分析由 **CodeQL** 工作流负责
+（`.github/workflows/codeql.yml`）；依赖更新由 **Dependabot** 负责
+（`.github/dependabot.yml`：pip / npm / actions / docker，每周）。
+
+## 发布
+
+打 tag 即触发发布流水线（`.github/workflows/release.yml`）：
+
+```bash
+# 打版本 tag 并推送，即自动测试 → 构建镜像 → 推送 GHCR → 创建 Release
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+- 测试门禁：`ruff check` + `pytest`；
+- 镜像推送到 GHCR（自动小写化）并用 **cosign 无密钥签名**：
+  - `ghcr.io/<owner>/mengxi-llm-chat-backend:<version>`（含 `latest`）
+  - `ghcr.io/<owner>/mengxi-llm-chat-frontend:<version>`（含 `latest`）
+- 由 **git-cliff** 依据提交生成变更日志与 Release Notes（`cliff.toml`），并自动创建 GitHub Release。
+- 交付到服务器：Actions ▸ **Deploy (CD)**（SSH 拉取 GHCR 镜像并重启），详见 [CI/CD 指南](docs/cd-guide.md)。
+
+镜像验签：
+
+```bash
+cosign verify ghcr.io/<owner>/mengxi-llm-chat-backend:v1.0.0 \
+  --certificate-identity-regexp "https://github.com/<owner>/mengxi-llm-chat/.github/workflows/release.yml@refs/tags/.*" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
 
 ## 许可证
 

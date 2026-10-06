@@ -1,0 +1,15 @@
+# digest 固定化部署覆盖文件（与 docker-compose.ghcr.yml 叠加使用）
+#   MENGXI_BACKEND_DIGEST=sha256:... MENGXI_FRONTEND_DIGEST=sha256:... \
+#     docker compose -f docker-compose.ghcr.yml -f docker-compose.digest.yml up -d
+#
+# 以镜像 digest（不可变）替代 tag，避免 tag 漂移。
+
+services:
+  migrate:
+    image: ghcr.io/${MENGXI_IMAGE_OWNER:-marchbeta2087}/mengxi-llm-chat-backend@${MENGXI_BACKEND_DIGEST:?set MENGXI_BACKEND_DIGEST}
+
+  app:
+    image: ghcr.io/${MENGXI_IMAGE_OWNER:-marchbeta2087}/mengxi-llm-chat-backend@${MENGXI_BACKEND_DIGEST:?set MENGXI_BACKEND_DIGEST}
+
+  web:
+    image: ghcr.io/${MENGXI_IMAGE_OWNER:-marchbeta2087}/mengxi-llm-chat-frontend@${MENGXI_FRONTEND_DIGEST:?set MENGXI_FRONTEND_DIGEST}
