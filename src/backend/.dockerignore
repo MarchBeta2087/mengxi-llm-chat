@@ -1,0 +1,13 @@
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.venv
+venv
+tests
+data
+*.db
+.env
+.env.*
+!.env.example
