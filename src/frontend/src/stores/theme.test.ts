@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
 import { useThemeStore } from './theme'
@@ -7,6 +7,10 @@ describe('theme store', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('更新设置并应用到 CSS 变量', async () => {
@@ -34,5 +38,21 @@ describe('theme store', () => {
     const store = useThemeStore()
     expect(store.settings.mode).toBe('light')
     expect(store.dark).toBe(false)
+  })
+
+  it('跟随系统模式读取 matchMedia', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    }))
+    const store = useThemeStore()
+    store.update({ mode: 'system' })
+    expect(store.dark).toBe(true)
   })
 })
