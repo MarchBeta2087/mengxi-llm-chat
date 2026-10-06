@@ -57,7 +57,7 @@ curl -s -X POST http://<站点>/api/admin/kek/initialize \
 
 公有 Key 由管理员维护、全员可用、调度优先级低于用户私有 Key。
 
-- **界面**：暂无公有 Key 管理界面；
+- **界面**：管理后台 → **公有 Key** 标签页（新增/测试/启停/删除，含六维限流字段）；
 - **接口**：使用与用户相同的 `/api/keys`，以管理员身份创建时置 `is_public: true`。
 
 ```bash
@@ -144,7 +144,11 @@ Key 级六维  →  用户级  →  IP 级
 
 优先级：**全局 > 用户组 > 个人 > 默认状态**（详见[插件系统说明书](plugin-system-guide.md)）。
 
-### 6.2 安装与配置（接口）
+### 6.2 安装与配置
+
+**界面**：管理后台 → **插件** 标签页：安装（Manifest JSON + 入口代码）、调整类型/默认状态/启停、**试运行**、以及 **用户组插件策略**。
+
+**接口**：
 
 ```bash
 # 安装：manifest + 入口代码
@@ -206,6 +210,10 @@ curl -s -b admin-cookies.txt "http://<站点>/api/admin/audit?fallback_only=true
 
 ### 8.1 状态与解锁（档 A）
 
+**界面**：设置 → **主密钥与恢复码**（初始化/解锁/锁定、恢复码剩余、重新生成、使用恢复码重置）。
+
+**接口**：
+
 ```bash
 curl -s -b admin-cookies.txt http://<站点>/api/admin/kek            # 状态/档位
 curl -s -b admin-cookies.txt -X POST http://<站点>/api/admin/kek/unlock \
@@ -216,6 +224,8 @@ curl -s -b admin-cookies.txt -X POST http://<站点>/api/admin/kek/lock  # 手�
 设置页也会显示主密钥状态（档位、是否解锁）。未解锁时，创建 Key/聊天等会返回 `50301`。
 
 ### 8.2 恢复码
+
+可在设置页的「主密钥与恢复码」面板中重新生成或使用恢复码重置；对应接口如下（恢复码仅展示一次）：
 
 ```bash
 # 剩余数量

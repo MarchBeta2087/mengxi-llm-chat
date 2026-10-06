@@ -62,3 +62,29 @@ export interface SseEvent {
   event: string
   data: Record<string, unknown>
 }
+
+export interface AdminPlugin {
+  id: string
+  name: string
+  version: string
+  description: string
+  type: 'global' | 'optional'
+  default_state: 'enabled' | 'disabled'
+  status: string
+  permissions: string[]
+  runtime: Record<string, number>
+}
+
+export interface GroupPluginEntry {
+  plugin_id: string
+  name: string
+  type: string
+  state: 'enabled' | 'disabled' | null
+}
+
+export interface KekStatus {
+  profile: string
+  state: string
+  unlocked?: boolean
+  recovery_codes?: string[]
+}
