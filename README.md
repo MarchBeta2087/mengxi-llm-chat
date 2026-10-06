@@ -87,6 +87,7 @@ pnpm dev                    # http://127.0.0.1:5173（/api 代理到 8000）
 ```
 .
 ├─ docs/                     # 文档（见下方索引）
+├─ deploy/k8s/               # Kubernetes（Kustomize）清单
 ├─ prototype/                # 界面原型（HTML）
 ├─ usecase/                  # PlantUML 用例图
 ├─ .github/workflows/        # CI（ci.yml）与安全分析（codeql.yml）
@@ -145,6 +146,7 @@ CI 在 push / PR 时自动执行（`.github/workflows/ci.yml`）：
 | Frontend | `pnpm audit`（high+）/ `vitest` 单测 + **覆盖率门禁** / `pnpm build` |
 | Frontend E2E | Playwright（登录 + 流式聊天，API mock；初期非阻断） |
 | Compose smoke | 全栈构建 + `/healthz` 健康检查 |
+| K8s | `kustomize build deploy/k8s/overlays/production` 渲染校验 |
 | Trivy | 后端/前端镜像 CVE 扫描（CRITICAL/HIGH） |
 | SBOM | 生成 CycloneDX（后端 `cyclonedx-py`、前端 Syft）并上传产物 |
 

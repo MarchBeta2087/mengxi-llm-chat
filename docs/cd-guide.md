@@ -86,17 +86,19 @@ cosign verify ghcr.io/<owner>/mengxi-llm-chat-backend:v1.0.0 \
 
 ### 4.3 触发
 
-Actions ▸ **Deploy (CD)** ▸ Run workflow ▸ 选择环境与镜像 tag（如 `v1.0.0`）。工作流执行：
+Actions ▸ **Deploy (CD)** ▸ Run workflow ▸ 选择环境与镜像 tag（如 `v1.0.0`）。工作流会：
 
-```bash
-cd "$DEPLOY_PATH"
-MENGXI_IMAGE_TAG=v1.0.0 docker compose -f docker-compose.ghcr.yml pull
-MENGXI_IMAGE_TAG=v1.0.0 docker compose -f docker-compose.ghcr.yml up -d
-```
+1. 在 runner 上把 tag **解析为不可变 digest**；
+2. SSH 到服务器，以 digest 固定方式拉取并启动：
+   `docker compose -f docker-compose.ghcr.yml -f docker-compose.digest.yml up -d`；
+3. 轮询 `http://127.0.0.1:8080/healthz`（最多 40 次 × 3s）；
+4. **成功**则记录当前版本到 `.mengxi-deploy.env`；**失败**则自动回滚到上一个已记录版本并以非零退出。
 
 ### 4.4 回滚
 
-改 tag 重新触发即可（`migrate` 用同一镜像执行 `alembic upgrade head`）。若迁移不可逆，需先恢复数据库备份（见部署手册 §6）。
+- 自动：健康检查失败即回滚（§4.3）；
+- 手动：重新触发并选择上一个 tag（或直接用 digest）。
+- 若迁移不可逆，需先恢复数据库备份（见部署手册 §6）。
 
 ---
 
@@ -104,8 +106,9 @@ MENGXI_IMAGE_TAG=v1.0.0 docker compose -f docker-compose.ghcr.yml up -d
 
 以 Git 仓库作为期望状态来源，ArgoCD 监听并同步：
 
-1. 将 `docker-compose.ghcr.yml` 转写为 Kubernetes 清单（Deployment/Service/StatefulSet），或使用 `kompose` 转换后调优；
-2. 把镜像 tag 参数化（如 Kustomize `images:` 或 Helm values）；
+1. 将 `docker-compose.ghcr.yml` 转写为 Kubernetes 清单——仓库已提供
+   [`deploy/k8s`](../deploy/k8s/README.md)（Kustomize base + production overlay）；
+2. 把镜像 tag 参数化（用 Kustomize `images:` 或 Helm values）；
 3. 新建 ArgoCD Application：
 
 ```yaml
@@ -119,7 +122,7 @@ spec:
   source:
     repoURL: https://github.com/<owner>/mengxi-llm-chat.git
     targetRevision: main
-    path: deploy/k8s           # 你的清单目录
+    path: deploy/k8s/overlays/production
   destination:
     server: https://kubernetes.default.svc
     namespace: mengxi
