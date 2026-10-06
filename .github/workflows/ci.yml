@@ -11,7 +11,8 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # 仅对 PR 启用“新运行取消旧运行”的去重；main/定时运行不互相取消
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
