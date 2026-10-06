@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     auto_create_tables: bool = False  # 仅开发/测试；生产用 Alembic
     plugins_dir: Path | None = None  # 插件包目录，默认 data_dir/plugins
+    builtin_plugins_dir: Path | None = None  # 内置插件目录（可安装清单），默认关闭
 
     # --- 会话 ---
     session_secret: str = "dev-insecure-change-me"
@@ -70,6 +71,10 @@ class Settings(BaseSettings):
     @property
     def plugins_path(self) -> Path:
         return self.plugins_dir or (self.data_dir / "plugins")
+
+    @property
+    def builtin_plugins_path(self) -> Path | None:
+        return Path(self.builtin_plugins_dir) if self.builtin_plugins_dir else None
 
     @property
     def salt_file(self) -> Path:

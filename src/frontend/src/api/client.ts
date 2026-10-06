@@ -1,6 +1,7 @@
 import type {
   AdminPlugin,
   ApiKey,
+  BuiltinPlugin,
   Conversation,
   GroupPluginEntry,
   KekStatus,
@@ -117,6 +118,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ name, daily_quota_tokens: dailyQuota }),
     }),
+  adminUpdateGroup: (id: string, patch: Record<string, unknown>) =>
+    request<Record<string, unknown>>(`/api/admin/groups/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
   adminAudit: (params = '') => request<Record<string, unknown>[]>(`/api/admin/audit${params}`),
   adminKek: () => request<KekStatus>('/api/admin/kek'),
   adminKekInitialize: (passphrase: string) =>
@@ -175,6 +181,21 @@ export const api = {
     request<GroupPluginEntry[]>(`/api/admin/groups/${groupId}/plugins/${pluginId}`, {
       method: 'DELETE',
     }),
+  adminBuiltinPlugins: () => request<BuiltinPlugin[]>('/api/admin/plugins/available'),
+  adminInstallBuiltin: (name: string) =>
+    request<AdminPlugin>('/api/admin/plugins/install-builtin', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+
+  // 审计导出：返回 CSV 文本
+  exportAuditCsv: async (params = ''): Promise<string> => {
+    const res = await fetch(`${BASE}/api/admin/audit/export${params}`, {
+      credentials: 'include',
+    })
+    if (!res.ok) throw new ApiError(res.statusText, res.status, res.status)
+    return res.text()
+  },
 }
 
 /** 解析单个 SSE 块（event + data），失败返回 null。 */

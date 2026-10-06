@@ -94,6 +94,31 @@ class PluginService:
             PluginInstall(manifest=manifest, code=entry.read_text(encoding="utf-8"))
         )
 
+    # --- 内置插件市场 ---
+    def list_builtin(self) -> list[dict]:
+        base = self.settings.builtin_plugins_path
+        if base is None or not base.exists():
+            return []
+        items: list[dict] = []
+        for manifest_path in sorted(base.glob("*/manifest.json")):
+            try:
+                manifest = PluginManifest.model_validate_json(
+                    manifest_path.read_text(encoding="utf-8")
+                )
+            except Exception:  # noqa: BLE001 - 跳过非法清单
+                continue
+            items.append(manifest.model_dump())
+        return items
+
+    async def install_builtin(self, name: str) -> Plugin:
+        base = self.settings.builtin_plugins_path
+        if base is None:
+            raise BadRequest("未配置内置插件目录")
+        source = base / name
+        if not source.is_dir():
+            raise NotFound(f"内置插件不存在: {name}")
+        return await self.install_from_directory(source)
+
     # --- 查询与解析 ---
     async def get(self, plugin_id: uuid.UUID) -> Plugin:
         plugin = await self.plugins.get(plugin_id)

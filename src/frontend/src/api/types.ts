@@ -88,3 +88,14 @@ export interface KekStatus {
   unlocked?: boolean
   recovery_codes?: string[]
 }
+
+export interface BuiltinPlugin {
+  name: string
+  version: string
+  description: string
+  type: 'global' | 'optional'
+  entry: string
+  permissions: string[]
+  default_state: 'enabled' | 'disabled'
+  runtime: Record<string, number>
+}

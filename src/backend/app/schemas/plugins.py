@@ -49,6 +49,10 @@ class PluginInstall(BaseModel):
     code: str = Field(min_length=1, max_length=200_000)
 
 
+class BuiltinInstall(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
+
+
 class PluginUpdate(BaseModel):
     type: str | None = Field(default=None, pattern=r"^(global|optional)$")
     default_state: str | None = Field(default=None, pattern=r"^(enabled|disabled)$")

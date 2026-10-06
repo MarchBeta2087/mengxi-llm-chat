@@ -55,3 +55,24 @@ def test_admin_audit_and_filters(client: TestClient, db_path: Path) -> None:
 def test_admin_audit_requires_admin(client: TestClient) -> None:
     register(client, "bob")
     assert client.get("/api/admin/audit").status_code == 403
+
+
+def test_admin_audit_export_csv(client: TestClient, db_path: Path) -> None:
+    register(client, "admin")
+    promote_to_admin(db_path, "admin")
+    create_key(client)
+    chat(client)
+
+    login(client, "admin")
+    resp = client.get("/api/admin/audit/export")
+    assert resp.status_code == 200, resp.text
+    assert "text/csv" in resp.headers["content-type"]
+    assert "attachment" in resp.headers.get("content-disposition", "")
+    lines = [line for line in resp.text.splitlines() if line]
+    assert lines[0].split(",")[:3] == ["id", "created_at", "user_id"]
+    assert len(lines) >= 2  # 表头 + 至少一条记录
+
+
+def test_admin_audit_export_requires_admin(client: TestClient) -> None:
+    register(client, "bob")
+    assert client.get("/api/admin/audit/export").status_code == 403

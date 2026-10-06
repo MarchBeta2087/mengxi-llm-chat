@@ -32,6 +32,21 @@ async function load() {
 }
 
 onMounted(load)
+
+async function exportCsv() {
+  const params = new URLSearchParams()
+  if (fallbackOnly.value) params.set('fallback_only', 'true')
+  if (status.value) params.set('status', status.value)
+  const qs = params.toString()
+  const text = await api.exportAuditCsv(qs ? `?${qs}` : '')
+  const blob = new Blob([text], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'audit.csv'
+  link.click()
+  URL.revokeObjectURL(url)
+}
 </script>
 
 <template>
@@ -48,6 +63,7 @@ onMounted(load)
         </select>
       </label>
       <button class="btn small" @click="load">刷新</button>
+      <button class="btn small" @click="exportCsv">导出 CSV</button>
     </div>
     <p v-if="error" class="notice">{{ error }}</p>
     <table>

@@ -30,6 +30,20 @@ async function create() {
   }
 }
 
+async function setQuota(group: Group) {
+  const value = prompt(`设置「${group.name}」的组日配额（0 = 不限）`, String(group.daily_quota_tokens))
+  if (value === null) return
+  await api.adminUpdateGroup(group.id, { daily_quota_tokens: Number(value) || 0 })
+  await load()
+}
+
+async function rename(group: Group) {
+  const name = prompt('重命名用户组', group.name)
+  if (!name || name === group.name) return
+  await api.adminUpdateGroup(group.id, { name })
+  await load()
+}
+
 onMounted(load)
 </script>
 
@@ -53,6 +67,7 @@ onMounted(load)
           <th>名称</th>
           <th>日配额</th>
           <th>ID</th>
+          <th>操作</th>
         </tr>
       </thead>
       <tbody>
@@ -60,9 +75,13 @@ onMounted(load)
           <td>{{ group.name }}</td>
           <td>{{ group.daily_quota_tokens || '不限' }}</td>
           <td><code>{{ group.id }}</code></td>
+          <td>
+            <button class="btn small" @click="setQuota(group)">改配额</button>
+            <button class="btn small" @click="rename(group)">改名</button>
+          </td>
         </tr>
         <tr v-if="!groups.length">
-          <td colspan="3" class="empty">暂无用户组</td>
+          <td colspan="4" class="empty">暂无用户组</td>
         </tr>
       </tbody>
     </table>
