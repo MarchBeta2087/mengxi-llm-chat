@@ -1,0 +1,46 @@
+services:
+  app:
+    build: ../backend
+    restart: unless-stopped
+    env_file:
+      - ../backend/.env
+    environment:
+      MENGXI_DATABASE_URL: postgresql+asyncpg://mengxi:mengxi@postgres:5432/mengxi
+      MENGXI_REDIS_URL: redis://redis:6379/0
+      MENGXI_DATA_DIR: /data
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/keys:/data/keys:rw        # DEK 密文（档 A/B），权限 600
+      - ../plugins:/data/plugins:ro       # 插件包只读挂载给沙箱
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mengxi
+      POSTGRES_USER: mengxi
+      POSTGRES_PASSWORD: mengxi
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mengxi -d mengxi"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  redisdata:
