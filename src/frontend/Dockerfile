@@ -11,6 +11,10 @@ COPY src ./src
 RUN pnpm build
 
 FROM nginx:1.27-alpine
+# 基础镜像 Alpine 的系统包存在已知漏洞（openssl/libpng/libexpat 等），
+# 构建时升级到当前分支的已修复版本（Trivy 会据此清零）
+RUN apk upgrade --no-cache && rm -rf /var/cache/apk/*
+
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 
