@@ -123,17 +123,25 @@ cd src/backend
 ruff check . && ruff format --check .
 pytest
 
-# 前端：构建
+# 前端：单测 + 构建
 cd src/frontend
+pnpm test
 pnpm build
 
 # 全栈冒烟（Docker Compose 构建并健康检查，完成后自动清理）
 bash src/deploy/smoke.sh
 ```
 
-CI 在 push / PR 时自动执行：后端 `ruff` + `pytest` + **依赖许可证扫描**（`pip-licenses`，阻止 GPL/AGPL）、
-前端 `pnpm build`、以及 **Docker Compose 冒烟**（见 `.github/workflows/ci.yml`）；
-安全分析由 **CodeQL** 工作流负责（`.github/workflows/codeql.yml`）。
+CI 在 push / PR 时自动执行（`.github/workflows/ci.yml`）：
+
+| Job | 内容 |
+| --- | --- |
+| Backend | `ruff check` / `ruff format` / `pytest` / 许可证扫描（`pip-licenses`，阻止 GPL/AGPL）/ 漏洞审计（`pip-audit`） |
+| Frontend | `pnpm audit`（high+）/ `vitest` 单测 / `pnpm build` |
+| Compose smoke | 全栈构建 + `/healthz` 健康检查 |
+| Trivy | 后端/前端镜像 CVE 扫描（CRITICAL/HIGH） |
+
+安全分析另由 **CodeQL** 工作流负责（`.github/workflows/codeql.yml`）。
 
 ## 许可证
 
