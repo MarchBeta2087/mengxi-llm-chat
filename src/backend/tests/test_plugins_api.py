@@ -173,3 +173,31 @@ def test_invalid_manifest_rejected(client: TestClient, db_path: Path) -> None:
     bad = {"manifest": {"name": "Bad Name!"}, "code": "print('x')"}
     resp = client.post("/api/admin/plugins", json=bad)
     assert resp.status_code == 422
+
+
+def test_builtin_marketplace_list_and_install(client_factory, db_path: Path) -> None:
+    client = client_factory(builtin_plugins_dir=str(BUILTIN))
+    _seed_admin(client, db_path)
+
+    available = client.get("/api/admin/plugins/available").json()["data"]
+    names = {item["name"] for item in available}
+    assert {"echo", "http-fetch"} <= names
+
+    resp = client.post("/api/admin/plugins/install-builtin", json={"name": "echo"})
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["data"]["name"] == "echo"
+
+    installed = client.get("/api/admin/plugins").json()["data"]
+    assert any(item["name"] == "echo" for item in installed)
+
+
+def test_builtin_install_missing(client_factory, db_path: Path) -> None:
+    client = client_factory(builtin_plugins_dir=str(BUILTIN))
+    _seed_admin(client, db_path)
+    resp = client.post("/api/admin/plugins/install-builtin", json={"name": "does-not-exist"})
+    assert resp.status_code == 404
+
+
+def test_builtin_disabled_without_dir(client: TestClient, db_path: Path) -> None:
+    _seed_admin(client, db_path)
+    assert client.get("/api/admin/plugins/available").json()["data"] == []

@@ -19,6 +19,7 @@ from app.infra.sandbox import PluginSandbox
 from app.models.user import User
 from app.repositories import PluginRepository
 from app.schemas.plugins import (
+    BuiltinInstall,
     GroupPluginSet,
     PluginInstall,
     PluginInvoke,
@@ -87,6 +88,29 @@ async def admin_list_plugins(
 ) -> dict:
     plugins = await PluginRepository(session).list()
     return _ok([_admin_read(plugin) for plugin in plugins])
+
+
+@admin_router.get("/plugins/available")
+async def admin_available_plugins(
+    _: object = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+    settings: Settings = Depends(get_settings_dep),
+    sandbox: PluginSandbox = Depends(get_plugin_sandbox),
+) -> dict:
+    """内置插件市场：列出可安装的内置插件清单。"""
+    return _ok(PluginService(session, settings, sandbox).list_builtin())
+
+
+@admin_router.post("/plugins/install-builtin", status_code=201)
+async def admin_install_builtin(
+    body: BuiltinInstall,
+    _: object = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+    settings: Settings = Depends(get_settings_dep),
+    sandbox: PluginSandbox = Depends(get_plugin_sandbox),
+) -> dict:
+    plugin = await PluginService(session, settings, sandbox).install_builtin(body.name)
+    return _ok(_admin_read(plugin))
 
 
 @admin_router.post("/plugins", status_code=201)

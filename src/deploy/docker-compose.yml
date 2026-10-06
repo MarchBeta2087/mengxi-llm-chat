@@ -24,9 +24,12 @@ services:
       MENGXI_DATABASE_URL: postgresql+asyncpg://mengxi:mengxi@postgres:5432/mengxi
       MENGXI_REDIS_URL: redis://redis:6379/0
       MENGXI_DATA_DIR: /data
+      MENGXI_BUILTIN_PLUGINS_DIR: /builtin-plugins
     volumes:
       # KEK/DEK 密文与插件包（plugins 子目录）
       - ./data:/data
+      # 内置插件目录（只读）：供管理后台“插件市场”一键安装
+      - ../plugins:/builtin-plugins:ro
     depends_on:
       postgres:
         condition: service_healthy

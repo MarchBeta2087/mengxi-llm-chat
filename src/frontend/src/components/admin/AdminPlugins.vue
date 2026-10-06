@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { ApiError, api } from '../../api/client'
-import type { AdminPlugin, GroupPluginEntry } from '../../api/types'
+import type { AdminPlugin, BuiltinPlugin, GroupPluginEntry } from '../../api/types'
 
 const plugins = ref<AdminPlugin[]>([])
+const builtin = ref<BuiltinPlugin[]>([])
+const expanded = ref('')
 const groups = ref<{ id: string; name: string }[]>([])
 const error = ref('')
 const info = ref('')
@@ -42,6 +44,19 @@ const groupPlugins = ref<GroupPluginEntry[]>([])
 async function load() {
   plugins.value = await api.adminListPlugins()
   groups.value = (await api.adminGroups()) as unknown as { id: string; name: string }[]
+  builtin.value = await api.adminBuiltinPlugins()
+}
+
+async function installBuiltin(name: string) {
+  error.value = ''
+  info.value = ''
+  try {
+    await api.adminInstallBuiltin(name)
+    info.value = `已安装内置插件 ${name}`
+    await load()
+  } catch (e) {
+    error.value = e instanceof ApiError ? e.message : String(e)
+  }
 }
 
 async function install() {
@@ -199,6 +214,46 @@ onMounted(load)
     </div>
 
     <div class="card">
+      <h3>🛒 内置插件市场</h3>
+      <table v-if="builtin.length">
+        <thead>
+          <tr>
+            <th>名称</th>
+            <th>版本</th>
+            <th>类型</th>
+            <th>说明</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template v-for="item in builtin" :key="item.name">
+            <tr>
+              <td>{{ item.name }}</td>
+              <td>{{ item.version }}</td>
+              <td>{{ item.type === 'global' ? '全局' : '可选' }}</td>
+              <td class="desc">{{ item.description }}</td>
+              <td>
+                <button
+                  class="btn small"
+                  @click="expanded = expanded === item.name ? '' : item.name"
+                >
+                  详情
+                </button>
+                <button class="btn small primary" @click="installBuiltin(item.name)">安装</button>
+              </td>
+            </tr>
+            <tr v-if="expanded === item.name">
+              <td colspan="5">
+                <pre>{{ JSON.stringify(item, null, 2) }}</pre>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+      <p v-else class="empty">未配置内置插件目录（MENGXI_BUILTIN_PLUGINS_DIR）</p>
+    </div>
+
+    <div class="card">
       <h3>＋ 安装插件</h3>
       <div class="cols">
         <label class="field">
@@ -257,6 +312,19 @@ textarea {
   text-align: center;
   color: var(--muted);
   padding: 16px;
+}
+.desc {
+  font-size: 12px;
+  color: var(--muted);
+}
+pre {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  overflow-x: auto;
 }
 .notice.ok {
   background: #e6f0e6;

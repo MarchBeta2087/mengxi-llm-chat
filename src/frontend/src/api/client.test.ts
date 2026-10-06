@@ -89,6 +89,27 @@ describe('request via api', () => {
     await api.adminRecoveryStatus()
     expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(20)
   })
+
+  it('覆盖管理端接口调用', async () => {
+    stubJson({})
+    await api.listPublicKeys()
+    await api.createPublicKey({ provider_name: 'p' })
+    await api.adminListPlugins()
+    await api.adminInstallPlugin({ name: 'x' }, 'code')
+    await api.adminUpdatePlugin('p1', { type: 'global' })
+    await api.adminInvokePlugin('p1', { text: 'hi' })
+    await api.adminGroupPlugins('g1')
+    await api.adminSetGroupPlugin('g1', 'p1', 'enabled')
+    await api.adminClearGroupPlugin('g1', 'p1')
+    await api.adminKek()
+    await api.adminKekInitialize('passphrase123')
+    await api.adminKekUnlock('passphrase123')
+    await api.adminKekLock()
+    await api.adminRecoveryStatus()
+    await api.adminRecoveryRegenerate()
+    await api.adminRecoveryUse('CODE-CODE-CODE', 'newpass123')
+    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(10)
+  })
 })
 
 describe('streamChat', () => {

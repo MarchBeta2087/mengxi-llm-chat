@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_session, require_admin
@@ -242,3 +244,69 @@ async def query_audit(
     )
     data = [AuditRead.model_validate(log).model_dump(mode="json") for log in logs]
     return _ok(data)
+
+
+_AUDIT_EXPORT_HEADERS = [
+    "id",
+    "created_at",
+    "user_id",
+    "key_id",
+    "key_type",
+    "model",
+    "base_url_host",
+    "tokens_in",
+    "tokens_out",
+    "latency_ms",
+    "status",
+    "fallback_to_public",
+    "client_ip",
+]
+
+
+@router.get("/audit/export")
+async def export_audit(
+    user_id: uuid.UUID | None = Query(default=None),
+    key_id: uuid.UUID | None = Query(default=None),
+    status: int | None = Query(default=None),
+    fallback_only: bool = Query(default=False),
+    start: datetime | None = Query(default=None),
+    end: datetime | None = Query(default=None),
+    _: object = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+) -> Response:
+    """审计导出 CSV（最多 10000 行，应用与检索相同的过滤条件）。"""
+    logs = await AuditRepository(session).list_all(
+        user_id=user_id,
+        key_id=key_id,
+        status=status,
+        fallback_only=fallback_only,
+        start=start,
+        end=end,
+        limit=10000,
+    )
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(_AUDIT_EXPORT_HEADERS)
+    for log in logs:
+        writer.writerow(
+            [
+                log.id,
+                log.created_at,
+                log.user_id,
+                log.key_id,
+                log.key_type,
+                log.model,
+                log.base_url_host,
+                log.tokens_in,
+                log.tokens_out,
+                log.latency_ms,
+                log.status,
+                log.fallback_to_public,
+                log.client_ip,
+            ]
+        )
+    return Response(
+        content=buffer.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="audit.csv"'},
+    )
