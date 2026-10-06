@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://mengxi:mengxi@localhost:5432/mengxi"
     redis_url: str = "redis://localhost:6379/0"
     auto_create_tables: bool = False  # 仅开发/测试；生产用 Alembic
+    plugins_dir: Path | None = None  # 插件包目录，默认 data_dir/plugins
 
     # --- 会话 ---
     session_secret: str = "dev-insecure-change-me"
@@ -63,6 +64,10 @@ class Settings(BaseSettings):
     @property
     def keys_dir(self) -> Path:
         return self.data_dir / "keys"
+
+    @property
+    def plugins_path(self) -> Path:
+        return self.plugins_dir or (self.data_dir / "plugins")
 
     @property
     def salt_file(self) -> Path:

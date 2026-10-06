@@ -12,7 +12,15 @@ from starlette.middleware.sessions import SessionMiddleware
 
 import app.models  # noqa: F401  导入以注册 ORM 元数据
 from app import __version__
-from app.api import admin_router, audit_router, auth_router, chat_router, keys_router
+from app.api import (
+    admin_router,
+    audit_router,
+    auth_router,
+    chat_router,
+    keys_router,
+    plugins_admin_router,
+    plugins_router,
+)
 from app.core.config import Settings, get_settings
 from app.core.crypto.kek import KekProvider, build_kek_provider
 from app.core.errors import MengxiError
@@ -21,6 +29,7 @@ from app.core.ssrf import SsrfPolicy
 from app.db.session import Database
 from app.domain.ratelimit import RateLimitSpec
 from app.infra.redis_store import RedisStore
+from app.infra.sandbox import PluginSandbox
 from app.services.key_manager import KeyManager
 from app.services.ratelimit import CircuitBreaker, RateLimiter
 from app.services.scheduler import SchedulerService
@@ -51,6 +60,7 @@ def create_app(
     redis_store = redis_store or RedisStore(settings.redis_url)
     user_rate_spec = RateLimitSpec.from_json(settings.user_rate_limits)
     ip_rate_spec = RateLimitSpec.from_json(settings.ip_rate_limits)
+    plugin_sandbox = PluginSandbox(ssrf_policy)
     rate_limiter = RateLimiter(redis_store)
     circuit_breaker = CircuitBreaker(redis_store)
     scheduler = SchedulerService(rate_limiter, circuit_breaker)
@@ -71,6 +81,7 @@ def create_app(
         app.state.scheduler = scheduler
         app.state.user_rate_spec = user_rate_spec
         app.state.ip_rate_spec = ip_rate_spec
+        app.state.plugin_sandbox = plugin_sandbox
 
         logger.info(
             "%s 启动 (env=%s, kek_profile=%s)",
@@ -107,6 +118,8 @@ def create_app(
     app.include_router(keys_router)
     app.include_router(chat_router)
     app.include_router(audit_router)
+    app.include_router(plugins_router)
+    app.include_router(plugins_admin_router)
     app.include_router(admin_router)
 
     @app.get("/healthz", tags=["system"])

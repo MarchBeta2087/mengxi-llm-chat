@@ -1,21 +1,30 @@
-# 内置插件目录
+# 内置插件
 
-本目录用于存放官方内置 / 管理员上传的插件包，容器中以**只读**方式挂载给插件沙箱（见设计说明书 §6）。
+本目录存放官方内置 / 管理员导入的插件包。运行时由 `PluginSandbox` 以独立子进程加载，
+容器部署时建议以**只读**方式挂载（见《插件系统说明书》§14）。
 
-规划中的内置插件：
+安装到本地实例：
+
+```bash
+cd src/backend
+python scripts/install_builtin_plugins.py --base http://127.0.0.1:8000 \
+  --username admin --password password123
+```
+
+## 现有插件
 
 | 插件 | 类型 | 权限声明 | 说明 |
 | --- | --- | --- | --- |
-| `web-search` | optional | `http:outbound:search.*` | 联网搜索，结果以不可信内容注入 |
-| `code-runner` | optional | `subprocess`, 只读文件系统, 无网络 | 隔离子进程运行 Python 片段 |
-| `doc-parse` | optional | `fs:read:uploads` | 解析 PDF / DOCX 附件 |
+| `echo` | optional | 无 | 回显输入，验证沙箱与 JSON Lines 协议 |
+| `http-fetch` | optional | `http:outbound:*` | 经宿主代理取 URL，演示出站权限与 SSRF 拦截 |
 
-> M3 里程碑实现插件系统与沙箱宿主，此处先占位。
-
-每个插件包结构：
+## 插件包结构
 
 ```
 <plugin-name>/
-├─ manifest.json      # 见设计说明书 §6.1
-└─ main.py            # 入口，stdin/stdout JSON 行协议
+├─ manifest.json      # 见《插件系统说明书》§4
+└─ main.py            # 入口，stdin/stdout JSON Lines 协议（§6.1）
 ```
+
+更完整的开发指南（权限模型、沙箱协议、生效优先级、API、安全）见
+[`docs/plugin-system-guide.md`](../../docs/plugin-system-guide.md)。

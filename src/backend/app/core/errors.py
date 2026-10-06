@@ -98,3 +98,22 @@ class KeyPoolExhausted(MengxiError):
 class KekLocked(MengxiError):
     http_status = 503
     code = 50301
+
+
+# --- 插件 ---
+class PluginError(MengxiError):
+    http_status = 500
+    code = 50010
+
+
+class PluginTimeout(PluginError):
+    code = 50011
+
+
+class PluginExecutionError(PluginError):
+    code = 50012
+
+
+class PluginPermissionDenied(PluginError):
+    http_status = 403
+    code = 40310
