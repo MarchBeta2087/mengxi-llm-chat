@@ -26,8 +26,8 @@
 | `web` | `src/frontend`（Node 构建 → Nginx） | 托管 SPA，并把 `/api` 反代到 `app`（SSE 关闭缓冲） |
 | `app` | `src/backend` | FastAPI + Uvicorn，加解密/调度/限流/插件 |
 | `migrate` | 同 `app` | 一次性执行 `alembic upgrade head` |
-| `postgres` | `postgres:15-alpine` | 业务库（密文）与审计 |
-| `redis` | `redis:7-alpine` | 限流/配额/熔断/缓存 |
+| `postgres` | `postgres:18-alpine` | 业务库（密文）与审计 |
+| `redis` | `redis:8-alpine` | 限流/配额/熔断/缓存 |
 
 第一版推荐单机 Compose；多实例扩展见 §11。
 
@@ -177,6 +177,25 @@ docker compose up -d          # migrate 服务先执行 alembic upgrade head
 - 迁移由 `migrate` 服务在 `app` 之前完成（`service_completed_successfully`）；
 - 出问题可回滚镜像，但**数据库迁移不自动回滚**，务必先备份；
 - 主密钥轮换：见《设计说明书》§3.6（新写新代、旧读旧代、后台迁移）。
+
+### 7.1 数据库大版本升级（PostgreSQL 15 → 18）
+
+PostgreSQL 主版本间**数据目录不兼容**，直接更换镜像会启动失败。必须采用导出/导入：
+
+```bash
+# 1) 旧版本下导出
+docker compose exec -T postgres pg_dump -U mengxi mengxi > backup.sql
+# 2) 停止并移除旧数据卷（卷名通常为 <compose 项目名>_pgdata）
+docker compose down
+docker volume rm mengxi_pgdata
+# 3) 确认 compose 中 postgres 镜像已更新（本例为 postgres:18-alpine）
+# 4) 启动新数据库并导入
+docker compose up -d postgres
+docker compose exec -T postgres psql -U mengxi -d mengxi < backup.sql
+docker compose up -d
+```
+
+> 全新部署无需此步骤。Redis 7 → 8 通常可直接替换镜像（持久化格式向后兼容）。
 
 ---
 

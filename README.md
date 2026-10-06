@@ -42,7 +42,7 @@
 - **前端**：Vue 3 + TypeScript + Vite + Pinia + Vue Router
 - **后端**：FastAPI + SQLAlchemy 2.0(async) + httpx + pydantic v2
 - **加密**：cryptography（AES-256-GCM、HKDF）+ argon2-cffi
-- **存储**：PostgreSQL 15（唯一官方支持）+ Redis 7
+- **存储**：PostgreSQL 18（唯一官方支持）+ Redis 8
 - **部署**：Docker Compose
 
 ## 快速开始
@@ -73,7 +73,7 @@ pip install -r requirements-dev.txt
 cp .env.example .env        # 档 B：设置 MENGXI_MASTER_KEY_B64
 uvicorn app.main:app --reload --port 8000
 
-# 前端（Node 22 + pnpm）
+# 前端（Node 24 + pnpm）
 cd ../frontend
 pnpm install
 pnpm dev                    # http://127.0.0.1:5173（/api 代理到 8000）
