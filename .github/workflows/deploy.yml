@@ -1,0 +1,43 @@
+name: Deploy (CD)
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "镜像 tag（如 v1.0.0 或 latest）"
+        required: true
+        default: latest
+      environment:
+        description: "目标环境"
+        type: choice
+        options: [production, staging]
+        default: production
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  deploy:
+    name: SSH deploy
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.DEPLOY_PATH }}"
+            export MENGXI_IMAGE_TAG="${{ inputs.image_tag }}"
+            docker compose -f docker-compose.ghcr.yml pull
+            docker compose -f docker-compose.ghcr.yml up -d
+            docker image prune -f
+            echo "已部署镜像 tag: $MENGXI_IMAGE_TAG"

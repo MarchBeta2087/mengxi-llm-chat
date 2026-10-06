@@ -1,0 +1,73 @@
+name: mengxi
+
+# 生产部署：使用 GHCR 预构建镜像（不本地 build）。
+# 在部署目录放置本文件、`.env`（见 backend/.env.example）与 `data/` 目录后：
+#   MENGXI_IMAGE_OWNER=<ghcr-owner> MENGXI_IMAGE_TAG=v1.0.0 \
+#     docker compose -f docker-compose.ghcr.yml up -d
+
+services:
+  migrate:
+    image: ghcr.io/${MENGXI_IMAGE_OWNER:-marchbeta2087}/mengxi-llm-chat-backend:${MENGXI_IMAGE_TAG:-latest}
+    command: ["alembic", "upgrade", "head"]
+    env_file:
+      - .env
+    environment:
+      MENGXI_DATABASE_URL: postgresql+asyncpg://mengxi:mengxi@postgres:5432/mengxi
+      MENGXI_DATA_DIR: /data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    image: ghcr.io/${MENGXI_IMAGE_OWNER:-marchbeta2087}/mengxi-llm-chat-backend:${MENGXI_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MENGXI_DATABASE_URL: postgresql+asyncpg://mengxi:mengxi@postgres:5432/mengxi
+      MENGXI_REDIS_URL: redis://redis:6379/0
+      MENGXI_DATA_DIR: /data
+    volumes:
+      - ./data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    image: ghcr.io/${MENGXI_IMAGE_OWNER:-marchbeta2087}/mengxi-llm-chat-frontend:${MENGXI_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - app
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mengxi
+      POSTGRES_USER: mengxi
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mengxi}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mengxi -d mengxi"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  redisdata:

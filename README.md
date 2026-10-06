@@ -105,6 +105,7 @@ pnpm dev                    # http://127.0.0.1:5173（/api 代理到 8000）
 | [可行性分析](docs/llm-chat-app-feasibility.md) | 技术/经济/法律/进度可行性 |
 | [设计说明书](docs/llm-chat-app-design.md) | 架构、模块、数据模型、接口、安全、测试 |
 | [部署与运维手册](docs/deployment-guide.md) | Compose 部署、TLS、备份恢复、升级、排障 |
+| [CI/CD 与持续交付指南](docs/cd-guide.md) | 变更日志(git-cliff)、镜像签名(cosign)、SSH CD、ArgoCD |
 | [使用自有密钥测试指南](docs/key-testing-guide.md) | 真钥 / 有效假钥 / 无效 base_url 三条路径 |
 | [插件系统说明书](docs/plugin-system-guide.md) | Manifest、权限、沙箱协议、优先级、开发指南 |
 
@@ -161,10 +162,19 @@ git tag v1.0.0 && git push origin v1.0.0
 ```
 
 - 测试门禁：`ruff check` + `pytest`；
-- 镜像推送到 GHCR（自动小写化）：
+- 镜像推送到 GHCR（自动小写化）并用 **cosign 无密钥签名**：
   - `ghcr.io/<owner>/mengxi-llm-chat-backend:<version>`（含 `latest`）
   - `ghcr.io/<owner>/mengxi-llm-chat-frontend:<version>`（含 `latest`）
-- 自动创建 GitHub Release（根据提交生成变更日志）。
+- 由 **git-cliff** 依据提交生成变更日志与 Release Notes（`cliff.toml`），并自动创建 GitHub Release。
+- 交付到服务器：Actions ▸ **Deploy (CD)**（SSH 拉取 GHCR 镜像并重启），详见 [CI/CD 指南](docs/cd-guide.md)。
+
+镜像验签：
+
+```bash
+cosign verify ghcr.io/<owner>/mengxi-llm-chat-backend:v1.0.0 \
+  --certificate-identity-regexp "https://github.com/<owner>/mengxi-llm-chat/.github/workflows/release.yml@refs/tags/.*" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
 
 ## 许可证
 
