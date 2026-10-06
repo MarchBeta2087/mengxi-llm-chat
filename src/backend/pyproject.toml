@@ -1,7 +1,7 @@
 [project]
-name = "mengxi-llm-talk-backend"
+name = "mengxi-llm-chat-backend"
 version = "0.1.0"
-description = "梦溪畅谈（mengxi-llm-talk）后端服务"
+description = "梦溪畅谈（mengxi-llm-chat）后端服务"
 readme = "../../README.md"
 requires-python = ">=3.11"
 license = { text = "BSD-3-Clause" }

@@ -1,6 +1,7 @@
-# 梦溪畅谈（mengxi-llm-talk）
+# 梦溪畅谈（mengxi-llm-chat）
 
 [![CI](https://github.com/MarchBeta2087/mengxi-llm-chat/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/MarchBeta2087/mengxi-llm-chat/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/MarchBeta2087/mengxi-llm-chat/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/MarchBeta2087/mengxi-llm-chat/actions/workflows/codeql.yml)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](./LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776ab.svg)](https://www.python.org/)
 [![Vue](https://img.shields.io/badge/vue-3-42b883.svg)](https://vuejs.org/)
@@ -88,7 +89,7 @@ pnpm dev                    # http://127.0.0.1:5173（/api 代理到 8000）
 ├─ docs/                     # 文档（见下方索引）
 ├─ prototype/                # 界面原型（HTML）
 ├─ usecase/                  # PlantUML 用例图
-├─ .github/workflows/ci.yml  # CI：ruff + pytest + pnpm build + 镜像构建
+├─ .github/workflows/        # CI（ci.yml）与安全分析（codeql.yml）
 └─ src/
    ├─ backend/               # FastAPI 服务、迁移、测试、脚本
    ├─ frontend/              # Vue 3 SPA
@@ -125,9 +126,14 @@ pytest
 # 前端：构建
 cd src/frontend
 pnpm build
+
+# 全栈冒烟（Docker Compose 构建并健康检查，完成后自动清理）
+bash src/deploy/smoke.sh
 ```
 
-CI 会在 push / PR 时自动执行上述检查（见 `.github/workflows/ci.yml`）。
+CI 在 push / PR 时自动执行：后端 `ruff` + `pytest` + **依赖许可证扫描**（`pip-licenses`，阻止 GPL/AGPL）、
+前端 `pnpm build`、以及 **Docker Compose 冒烟**（见 `.github/workflows/ci.yml`）；
+安全分析由 **CodeQL** 工作流负责（`.github/workflows/codeql.yml`）。
 
 ## 许可证
 

@@ -10,7 +10,7 @@ actor "管理员" as admin
 anon <|-- user
 user <|-- admin
 
-rectangle "梦溪畅谈 (mengxi-llm-talk)" {
+rectangle "梦溪畅谈 (mengxi-llm-chat)" {
 
   usecase "注册 / 登录" as auth
   usecase "流式聊天 (SSE)" as chat
