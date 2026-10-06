@@ -49,7 +49,7 @@ jobs:
           echo "frontend digest: $fd"
 
       - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@v1.2.5
         env:
           MENGXI_IMAGE_TAG: ${{ inputs.image_tag }}
           MENGXI_BACKEND_DIGEST: ${{ steps.digests.outputs.backend }}

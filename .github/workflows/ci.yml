@@ -155,7 +155,7 @@ jobs:
           tags: mengxi-frontend:scan
 
       - name: Scan backend image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: mengxi-backend:scan
           format: table
@@ -164,7 +164,7 @@ jobs:
           exit-code: "1"
 
       - name: Scan frontend image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: mengxi-frontend:scan
           format: table
@@ -178,7 +178,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: imranismail/setup-kustomize@v2
+      - uses: imranismail/setup-kustomize@v3.0.0
 
       - name: Render production overlay
         run: kustomize build deploy/k8s/overlays/production > /dev/null
@@ -204,7 +204,7 @@ jobs:
           cyclonedx-py environment --output-format JSON -o ../../sbom-backend.cdx.json
 
       - name: Generate frontend SBOM (CycloneDX via Syft)
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@v0.24.3
         with:
           path: src/frontend
           format: cyclonedx-json
