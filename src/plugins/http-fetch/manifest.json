@@ -1,0 +1,10 @@
+{
+  "name": "http-fetch",
+  "version": "1.0.0",
+  "description": "经宿主代理获取指定 URL 内容（演示出站权限）",
+  "type": "optional",
+  "entry": "main.py",
+  "permissions": ["http:outbound:*"],
+  "default_state": "disabled",
+  "runtime": { "timeout_ms": 15000, "memory_mb": 128, "cpu_seconds": 10 }
+}

@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.api_key import ApiKey
+from app.models.plugin import GroupPlugin, Plugin, UserPlugin
 from app.models.recovery import AuditLog
 from app.models.user import User, UserGroup
 
@@ -138,3 +139,81 @@ class AuditRepository:
         )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+
+
+class PluginRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def get(self, plugin_id: uuid.UUID) -> Plugin | None:
+        return await self.session.get(Plugin, plugin_id)
+
+    async def get_by_name(self, name: str) -> Plugin | None:
+        result = await self.session.execute(select(Plugin).where(Plugin.name == name))
+        return result.scalar_one_or_none()
+
+    async def list(self, *, status: str | None = None) -> list[Plugin]:
+        stmt = select(Plugin).order_by(Plugin.name)
+        if status is not None:
+            stmt = stmt.where(Plugin.status == status)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def add(self, plugin: Plugin) -> Plugin:
+        self.session.add(plugin)
+        await self.session.flush()
+        return plugin
+
+    async def delete(self, plugin: Plugin) -> None:
+        await self.session.delete(plugin)
+
+
+class UserPluginRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def get(self, user_id: uuid.UUID, plugin_id: uuid.UUID) -> UserPlugin | None:
+        return await self.session.get(UserPlugin, (user_id, plugin_id))
+
+    async def map_for_user(self, user_id: uuid.UUID) -> dict[uuid.UUID, bool]:
+        result = await self.session.execute(select(UserPlugin).where(UserPlugin.user_id == user_id))
+        return {row.plugin_id: row.enabled for row in result.scalars().all()}
+
+    async def set(self, user_id: uuid.UUID, plugin_id: uuid.UUID, enabled: bool) -> UserPlugin:
+        row = await self.get(user_id, plugin_id)
+        if row is None:
+            row = UserPlugin(user_id=user_id, plugin_id=plugin_id, enabled=enabled)
+            self.session.add(row)
+        else:
+            row.enabled = enabled
+        await self.session.flush()
+        return row
+
+
+class GroupPluginRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def get(self, group_id: uuid.UUID, plugin_id: uuid.UUID) -> GroupPlugin | None:
+        return await self.session.get(GroupPlugin, (group_id, plugin_id))
+
+    async def map_for_group(self, group_id: uuid.UUID) -> dict[uuid.UUID, str]:
+        result = await self.session.execute(
+            select(GroupPlugin).where(GroupPlugin.group_id == group_id)
+        )
+        return {row.plugin_id: row.state for row in result.scalars().all()}
+
+    async def set(self, group_id: uuid.UUID, plugin_id: uuid.UUID, state: str) -> GroupPlugin:
+        row = await self.get(group_id, plugin_id)
+        if row is None:
+            row = GroupPlugin(group_id=group_id, plugin_id=plugin_id, state=state)
+            self.session.add(row)
+        else:
+            row.state = state
+        await self.session.flush()
+        return row
+
+    async def delete(self, group_id: uuid.UUID, plugin_id: uuid.UUID) -> None:
+        row = await self.get(group_id, plugin_id)
+        if row is not None:
+            await self.session.delete(row)

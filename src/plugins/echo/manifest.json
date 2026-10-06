@@ -1,0 +1,10 @@
+{
+  "name": "echo",
+  "version": "1.0.0",
+  "description": "回显输入文本，用于验证沙箱与协议",
+  "type": "optional",
+  "entry": "main.py",
+  "permissions": [],
+  "default_state": "disabled",
+  "runtime": { "timeout_ms": 5000, "memory_mb": 64, "cpu_seconds": 2 }
+}
