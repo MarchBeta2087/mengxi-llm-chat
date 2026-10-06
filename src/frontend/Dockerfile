@@ -1,5 +1,5 @@
 # 多阶段构建：Node 构建静态资源 → Nginx 托管并反代 /api
-FROM node:22-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 RUN corepack enable
 
