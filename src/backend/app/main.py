@@ -19,7 +19,9 @@ from app.core.errors import MengxiError
 from app.core.logging import setup_logging
 from app.core.ssrf import SsrfPolicy
 from app.db.session import Database
+from app.infra.redis_store import RedisStore
 from app.services.key_manager import KeyManager
+from app.services.ratelimit import CircuitBreaker, RateLimiter
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +44,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         max_redirects=settings.max_redirects,
     )
     database = Database(settings.database_url, echo=settings.debug)
+    redis_store = RedisStore(settings.redis_url)
+    rate_limiter = RateLimiter(redis_store)
+    circuit_breaker = CircuitBreaker(redis_store)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -53,6 +58,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.key_manager = key_manager
         app.state.ssrf_policy = ssrf_policy
         app.state.db = database
+        app.state.redis_store = redis_store
+        app.state.rate_limiter = rate_limiter
+        app.state.circuit_breaker = circuit_breaker
 
         logger.info(
             "%s 启动 (env=%s, kek_profile=%s)",
@@ -61,6 +69,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             settings.kek_profile,
         )
         yield
+        await redis_store.close()
         await database.dispose()
         logger.info("%s 关闭", settings.app_name)
 
