@@ -6,7 +6,7 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -113,6 +113,27 @@ def create_app(
         same_site="lax",
         https_only=settings.environment == "production",
     )
+
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next):
+        """为所有响应补齐安全响应头（API 层纵深防御，SPA 静态资源由 Nginx 统一设置）。
+
+        使用 setdefault，避免覆盖反向代理已注入的同名头。API 仅返回 JSON，
+        因此对其施加最严格的 CSP；/docs 等开发页面不受影响。
+        """
+        response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault(
+            "Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()"
+        )
+        response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+        if request.url.path.startswith("/api"):
+            response.headers.setdefault(
+                "Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'"
+            )
+        return response
 
     @app.exception_handler(MengxiError)
     async def _handle_mengxi_error(_request, exc: MengxiError) -> JSONResponse:

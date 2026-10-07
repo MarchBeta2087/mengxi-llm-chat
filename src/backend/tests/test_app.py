@@ -19,6 +19,23 @@ def test_healthz(tmp_path) -> None:
     assert resp.json()["status"] == "ok"
 
 
+def test_security_headers(tmp_path) -> None:
+    app = create_app(Settings(kek_profile="A", data_dir=tmp_path))
+    with TestClient(app) as client:
+        health = client.get("/healthz")
+        api = client.get("/api/__headers_probe__")
+
+    for resp in (health, api):
+        assert resp.headers["X-Content-Type-Options"] == "nosniff"
+        assert resp.headers["X-Frame-Options"] == "DENY"
+        assert resp.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
+        assert "camera=()" in resp.headers["Permissions-Policy"]
+
+    # API 施加最严格 CSP；非 API 路径不施加（避免破坏 /docs 等页面）
+    assert health.headers.get("Content-Security-Policy") is None
+    assert api.headers["Content-Security-Policy"].startswith("default-src 'none'")
+
+
 def test_kek_status_uninitialized(client_factory, db_path: Path) -> None:
     client = client_factory(kek_profile="A", master_key_b64=None)
     register(client, "admin")
