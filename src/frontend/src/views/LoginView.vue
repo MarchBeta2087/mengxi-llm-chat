@@ -35,9 +35,23 @@ async function submit() {
       <h1>梦溪畅谈</h1>
       <p class="sub">可自部署的 LLM 聊天服务</p>
 
-      <div class="tabs">
-        <button :class="{ on: mode === 'login' }" @click="mode = 'login'">登录</button>
-        <button :class="{ on: mode === 'register' }" @click="mode = 'register'">注册</button>
+      <div class="tabs" role="group" aria-label="登录或注册">
+        <button
+          type="button"
+          :class="{ on: mode === 'login' }"
+          :aria-pressed="mode === 'login'"
+          @click="mode = 'login'"
+        >
+          登录
+        </button>
+        <button
+          type="button"
+          :class="{ on: mode === 'register' }"
+          :aria-pressed="mode === 'register'"
+          @click="mode = 'register'"
+        >
+          注册
+        </button>
       </div>
 
       <form @submit.prevent="submit">
@@ -50,13 +64,13 @@ async function submit() {
           <input
             v-model="password"
             type="password"
-            autocomplete="current-password"
+            :autocomplete="mode === 'login' ? 'current-password' : 'new-password'"
             required
             minlength="8"
           />
         </label>
-        <p v-if="error" class="notice">{{ error }}</p>
-        <button class="btn primary wide" :disabled="busy">
+        <p v-if="error" class="notice" role="alert">{{ error }}</p>
+        <button class="btn primary wide" type="submit" :disabled="busy" :aria-busy="busy">
           {{ busy ? '处理中…' : mode === 'login' ? '登录' : '注册并登录' }}
         </button>
       </form>

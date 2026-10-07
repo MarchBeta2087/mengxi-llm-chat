@@ -62,20 +62,21 @@ async function exportCsv() {
           <option value="502">502</option>
         </select>
       </label>
-      <button class="btn small" @click="load">刷新</button>
-      <button class="btn small" @click="exportCsv">导出 CSV</button>
+      <button class="btn small" type="button" @click="load">刷新</button>
+      <button class="btn small" type="button" @click="exportCsv">导出 CSV</button>
     </div>
-    <p v-if="error" class="notice">{{ error }}</p>
+    <p v-if="error" class="notice" role="alert">{{ error }}</p>
     <table>
+      <caption class="visually-hidden">审计日志</caption>
       <thead>
         <tr>
-          <th>时间</th>
-          <th>用户</th>
-          <th>Key 类型</th>
-          <th>模型</th>
-          <th>状态</th>
-          <th>tokens</th>
-          <th>回退</th>
+          <th scope="col">时间</th>
+          <th scope="col">用户</th>
+          <th scope="col">Key 类型</th>
+          <th scope="col">模型</th>
+          <th scope="col">状态</th>
+          <th scope="col">tokens</th>
+          <th scope="col">回退</th>
         </tr>
       </thead>
       <tbody>

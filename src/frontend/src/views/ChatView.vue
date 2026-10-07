@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { ApiError, api, streamChat } from '../api/client'
 import type { AvailableKey, Conversation, Message, SearchHit } from '../api/types'
 
@@ -140,14 +140,24 @@ async function loadAvailable() {
   }
 }
 
-function openModels() {
+const modalRef = ref<HTMLElement | null>(null)
+const modelButtonRef = ref<HTMLButtonElement | null>(null)
+
+async function openModels() {
   showModels.value = true
   void loadAvailable()
+  await nextTick()
+  modalRef.value?.focus()
+}
+
+function closeModels() {
+  showModels.value = false
+  modelButtonRef.value?.focus()
 }
 
 function pickModel(value: string) {
   model.value = value
-  showModels.value = false
+  closeModels()
 }
 
 onMounted(async () => {
@@ -158,21 +168,30 @@ onMounted(async () => {
 
 <template>
   <div class="chat">
-    <aside class="convs">
-      <button class="btn primary new-btn" @click="newConversation">＋ 新会话</button>
+    <aside class="convs" aria-label="会话列表">
+      <button class="btn primary new-btn" type="button" @click="newConversation">＋ 新会话</button>
 
+      <label class="visually-hidden" for="conv-search">搜索会话或消息</label>
       <input
+        id="conv-search"
         v-model="query"
         class="search"
+        type="search"
         placeholder="搜索会话/消息（Enter）"
         @keyup.enter="runSearch"
         @input="!query && clearSearch()"
       />
 
       <div v-if="hits.length" class="list results">
-        <div v-for="(hit, i) in hits" :key="i" class="conv result" @click="openHit(hit)">
+        <button
+          v-for="(hit, i) in hits"
+          :key="i"
+          type="button"
+          class="conv result"
+          @click="openHit(hit)"
+        >
           <span class="title">{{ hit.snippet || hit.title }}</span>
-        </div>
+        </button>
       </div>
 
       <label class="arch">
@@ -185,56 +204,107 @@ onMounted(async () => {
           :key="conversation.id"
           class="conv"
           :class="{ active: current?.id === conversation.id }"
-          @click="openConversation(conversation)"
         >
-          <span class="title">{{ conversation.title }}</span>
-          <span v-if="conversation.encrypted" title="已加密存储">🔒</span>
-          <span v-if="conversation.archived" class="tag off">归档</span>
-          <button class="act" title="重命名" @click.stop="renameConversation(conversation)">✎</button>
+          <button
+            type="button"
+            class="conv-open"
+            :aria-current="current?.id === conversation.id ? 'true' : undefined"
+            @click="openConversation(conversation)"
+          >
+            <span class="title">{{ conversation.title }}</span>
+            <span v-if="conversation.encrypted" title="已加密存储" aria-label="已加密存储">🔒</span>
+            <span v-if="conversation.archived" class="tag off">归档</span>
+          </button>
           <button
             class="act"
+            type="button"
+            :aria-label="`重命名会话 ${conversation.title}`"
+            title="重命名"
+            @click.stop="renameConversation(conversation)"
+          >
+            ✎
+          </button>
+          <button
+            class="act"
+            type="button"
+            :aria-label="
+              conversation.archived ? `取消归档 ${conversation.title}` : `归档 ${conversation.title}`
+            "
             :title="conversation.archived ? '取消归档' : '归档'"
             @click.stop="toggleArchive(conversation)"
           >
             {{ conversation.archived ? '↩' : '📦' }}
           </button>
-          <button class="act" title="删除" @click.stop="removeConversation(conversation)">✕</button>
+          <button
+            class="act"
+            type="button"
+            :aria-label="`删除会话 ${conversation.title}`"
+            title="删除"
+            @click.stop="removeConversation(conversation)"
+          >
+            ✕
+          </button>
         </div>
       </div>
     </aside>
 
     <section class="main">
       <header class="topbar">
-        <button class="model-btn" @click="openModels">🧠 {{ model }} ▾</button>
+        <button
+          ref="modelButtonRef"
+          class="model-btn"
+          type="button"
+          aria-haspopup="dialog"
+          :aria-expanded="showModels"
+          @click="openModels"
+        >
+          🧠 {{ model }} ▾
+        </button>
         <span class="tag">{{ current?.encrypted ? '已加密存储 🔒' : '未加密' }}</span>
       </header>
 
-      <div class="scroll">
+      <div class="scroll" role="log" aria-label="对话消息" aria-live="polite">
         <div v-for="(message, index) in messages" :key="index" class="msg" :class="message.role">
-          <div class="avatar">{{ message.role === 'user' ? '我' : '溪' }}</div>
+          <div class="avatar" aria-hidden="true">{{ message.role === 'user' ? '我' : '溪' }}</div>
           <div class="bubble">{{ message.content || (streaming ? '…' : '') }}</div>
         </div>
-        <p v-if="error" class="notice">{{ error }}</p>
+        <p v-if="error" class="notice" role="alert">{{ error }}</p>
       </div>
 
       <footer class="composer">
         <textarea
           v-model="input"
           rows="2"
+          aria-label="消息输入"
           placeholder="向梦溪提问……（Enter 发送，Shift+Enter 换行）"
           @keydown.enter.exact.prevent="send"
         />
-        <button class="btn primary" :disabled="streaming" @click="send">
+        <button
+          class="btn primary"
+          type="button"
+          :disabled="streaming"
+          :aria-busy="streaming"
+          @click="send"
+        >
           {{ streaming ? '生成中…' : '发送 ⏎' }}
         </button>
       </footer>
     </section>
 
-    <div v-if="showModels" class="modal-mask" @click.self="showModels = false">
-      <div class="modal">
+    <div v-if="showModels" class="modal-mask" @click.self="closeModels" @keydown.esc="closeModels">
+      <div
+        ref="modalRef"
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="model-modal-title"
+        tabindex="-1"
+      >
         <header class="modal-head">
-          <h3>选择模型</h3>
-          <button class="btn small" @click="showModels = false">✕</button>
+          <h3 id="model-modal-title">选择模型</h3>
+          <button class="btn small" type="button" aria-label="关闭模型选择" @click="closeModels">
+            ✕
+          </button>
         </header>
         <p class="hint">展示名 · 脱敏 Key · 模型 · 用量（全局/个人）</p>
         <p v-if="!available.length" class="empty">
@@ -257,7 +327,9 @@ onMounted(async () => {
               v-for="item in key.models"
               :key="item"
               class="chip"
+              type="button"
               :class="{ on: item === model }"
+              :aria-pressed="item === model"
               @click="pickModel(item)"
             >
               {{ item }}
@@ -313,19 +385,46 @@ onMounted(async () => {
 .conv {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 8px;
+  gap: 2px;
   border-radius: 8px;
   font-size: 13px;
+}
+.conv-open {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  padding: 8px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
 }
-.conv:hover {
+.conv-open:hover {
   background: var(--paper);
 }
-.conv.active {
+.conv.active .conv-open {
   background: var(--bubble-user);
   color: var(--xi-dark);
   font-weight: 600;
+}
+.conv.result {
+  width: 100%;
+  padding: 8px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.conv.result:hover {
+  background: var(--paper);
 }
 .conv.result .title {
   color: var(--muted);
@@ -344,8 +443,14 @@ onMounted(async () => {
   opacity: 0;
   padding: 0 2px;
 }
-.conv:hover .act {
+.conv:hover .act,
+.conv:focus-within .act {
   opacity: 1;
+}
+@media (hover: none) {
+  .act {
+    opacity: 1;
+  }
 }
 .main {
   flex: 1;

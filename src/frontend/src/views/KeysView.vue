@@ -74,19 +74,20 @@ onMounted(load)
     <h2>我的 Key</h2>
     <p class="hint">所有 Key 以 AES-256-GCM 加密存储，界面仅显示脱敏形式。</p>
 
-    <p v-if="error" class="notice">{{ error }}</p>
-    <p v-if="info" class="notice ok">{{ info }}</p>
+    <p v-if="error" class="notice" role="alert">{{ error }}</p>
+    <p v-if="info" class="notice ok" role="status">{{ info }}</p>
 
     <div class="card">
       <table>
+        <caption class="visually-hidden">我的私有 API Key 列表</caption>
         <thead>
           <tr>
-            <th>名称</th>
-            <th>Key</th>
-            <th>Base URL</th>
-            <th>模型</th>
-            <th>状态</th>
-            <th>操作</th>
+            <th scope="col">名称</th>
+            <th scope="col">Key</th>
+            <th scope="col">Base URL</th>
+            <th scope="col">模型</th>
+            <th scope="col">状态</th>
+            <th scope="col">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -99,11 +100,25 @@ onMounted(load)
               <span class="tag" :class="{ off: key.status !== 'active' }">{{ key.status }}</span>
             </td>
             <td>
-              <button class="btn small" @click="test(key)">测试</button>
-              <button class="btn small" @click="toggle(key)">
+              <button class="btn small" type="button" :aria-label="`测试 ${key.provider_name}`" @click="test(key)">
+                测试
+              </button>
+              <button
+                class="btn small"
+                type="button"
+                :aria-label="`${key.status === 'active' ? '停用' : '启用'} ${key.provider_name}`"
+                @click="toggle(key)"
+              >
                 {{ key.status === 'active' ? '停用' : '启用' }}
               </button>
-              <button class="btn small" @click="remove(key)">删除</button>
+              <button
+                class="btn small"
+                type="button"
+                :aria-label="`删除 ${key.provider_name}`"
+                @click="remove(key)"
+              >
+                删除
+              </button>
             </td>
           </tr>
           <tr v-if="!keys.length">
