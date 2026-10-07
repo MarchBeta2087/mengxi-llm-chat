@@ -1,6 +1,6 @@
 [project]
 name = "mengxi-llm-chat-backend"
-version = "0.1.0"
+version = "1.0.0"
 description = "梦溪畅谈（mengxi-llm-chat）后端服务"
 readme = "../../README.md"
 requires-python = ">=3.11"

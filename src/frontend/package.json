@@ -1,7 +1,7 @@
 {
   "name": "mengxi-llm-chat-frontend",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
+    "screenshots": "node scripts/screenshots.mjs",
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
