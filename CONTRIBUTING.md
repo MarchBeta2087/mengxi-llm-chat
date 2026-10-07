@@ -90,6 +90,12 @@ pnpm build
 
 CI 还会执行：依赖许可证扫描（无 GPL/AGPL）、`pip-audit`/`pnpm audit`、镜像 Trivy 扫描、SBOM、CodeQL、K8s 清单渲染、Docker Compose 冒烟。
 
+### 无障碍（Accessibility）
+
+界面改动以 [WCAG 2.1 AA](https://www.w3.org/TR/WCAG21/) 为目标，请对照[无障碍声明的贡献者清单](ACCESSIBILITY.md#6-面向贡献者的无障碍清单)：
+优先使用原生语义元素、为表单控件关联标签、图标按钮补 `aria-label`、支持纯键盘操作与可见焦点、
+动态状态使用 `role="alert"`/`aria-live`，并满足 AA 对比度与 `prefers-reduced-motion`。
+
 ---
 
 ## 5. 安全红线
@@ -97,7 +103,7 @@ CI 还会执行：依赖许可证扫描（无 GPL/AGPL）、`pip-audit`/`pnpm au
 - **绝不提交真实密钥**：仓库已忽略 `apikeys/` 与 `*.db`；测试请使用假密钥或环境变量；
 - 不在 Issue/PR/日志/截图中粘贴 API Key、主口令或恢复码（一律脱敏为 `sk-xxxx…xxxx`）；
 - 涉及安全问题的改动请在描述中说明威胁与缓解；
-- 发现安全漏洞请按仓库 Security 指引私下报告，勿公开提交。
+- 发现安全漏洞请按 [安全政策](SECURITY.md) 的**私密渠道**报告，勿公开提交。
 
 ---
 
@@ -116,5 +122,7 @@ CI 还会执行：依赖许可证扫描（无 GPL/AGPL）、`pip-audit`/`pnpm au
 - [插件系统说明书](docs/plugin-system-guide.md)（开发插件）
 - [部署与运维手册](docs/deployment-guide.md)
 - [CI/CD 与持续交付指南](docs/cd-guide.md)
+- [安全政策](SECURITY.md)（漏洞报告）
+- [无障碍声明](ACCESSIBILITY.md)
 
 感谢你的贡献！

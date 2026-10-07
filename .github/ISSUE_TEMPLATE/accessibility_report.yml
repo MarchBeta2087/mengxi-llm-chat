@@ -1,0 +1,65 @@
+name: 无障碍问题（Accessibility）
+description: 反馈键盘、屏幕阅读器、对比度、缩放等无障碍障碍
+title: "[A11y] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你帮助我们改进无障碍体验！请描述**具体页面与操作**，便于复现。
+        无障碍目标与已知限制见
+        [ACCESSIBILITY.md](https://github.com/MarchBeta2087/mengxi-llm-chat/blob/main/ACCESSIBILITY.md)。
+        若问题涉及安全影响，请改用
+        [安全政策](https://github.com/MarchBeta2087/mengxi-llm-chat/blob/main/SECURITY.md)的私密渠道。
+  - type: textarea
+    id: barrier
+    attributes:
+      label: 障碍描述
+      description: 你遇到了什么障碍？期望的结果是什么？
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 打开「聊天」页
+        2. 仅用 Tab / 方向键导航
+        3. 在 ... 处无法 ...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 影响范围
+      multiple: true
+      options:
+        - 键盘导航 / 焦点
+        - 屏幕阅读器（NVDA / VoiceOver / 其它）
+        - 颜色对比度
+        - 缩放 / 文字放大
+        - 表单标签 / 错误提示
+        - 弹窗 / 对话框
+        - 动效 / 减少动态效果
+        - 其它
+  - type: input
+    id: assistive
+    attributes:
+      label: 使用的辅助技术
+      placeholder: 例如 NVDA 2024.4 + Chrome 130（Windows）
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 浏览器 / 操作系统 / 版本
+      placeholder: 例如 Chrome 130 / Windows 11（200% 缩放）
+  - type: input
+    id: version
+    attributes:
+      label: 应用版本 / Commit
+      placeholder: v1.0.0 或 commit hash
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 截图 / 录屏 / 日志
+      description: 可选；请先脱敏，勿包含真实 API Key、主口令或恢复码

@@ -143,7 +143,9 @@ pnpm dev                    # http://127.0.0.1:5173（/api 代理到 8000）
 - 数据库内**不含任何明文** API Key 与消息内容（密文 + 脱敏）；
 - 管理员**无法**通过任何接口读取他人私有 Key 或对话明文；
 - 主密钥不落数据库；恢复码一次性使用、用后全量轮换；
-- 请勿提交真实密钥：仓库已忽略 `apikeys/` 与 `*.db`；排障信息一律脱敏。
+- 请勿提交真实密钥：仓库已忽略 `apikeys/` 与 `*.db`；排障信息一律脱敏；
+- Web 部署默认注入安全响应头（Nginx 注入 SPA 的 CSP 等，后端补齐 `/api` 安全头）；
+- 发现漏洞请通过 [安全政策](SECURITY.md) 的**私密渠道**报告，勿公开提交。
 
 ## 开发
 
@@ -205,6 +207,16 @@ cosign verify ghcr.io/<owner>/mengxi-llm-chat-backend:v1.0.0 \
   --certificate-identity-regexp "https://github.com/<owner>/mengxi-llm-chat/.github/workflows/release.yml@refs/tags/.*" \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
+
+## 社区与政策
+
+| 文档 | 内容 |
+| --- | --- |
+| [贡献指南](CONTRIBUTING.md) | 开发环境、分支模型、提交规范与 PR 流程 |
+| [行为准则](CODE_OF_CONDUCT.md) | 参与社区的共同约定 |
+| [安全政策](SECURITY.md) | 漏洞报告渠道、支持版本、响应时限与范围界定 |
+| [无障碍声明](ACCESSIBILITY.md) | 遵循 WCAG 2.1 AA、已实现能力、已知限制与反馈方式 |
+| [Issue / PR 模板](.github/) | Bug、功能建议、无障碍问题与 PR 检查清单 |
 
 ## 许可证
 

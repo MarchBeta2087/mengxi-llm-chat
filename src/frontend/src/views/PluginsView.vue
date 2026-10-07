@@ -38,9 +38,9 @@ onMounted(load)
     <p class="hint">
       生效优先级：全局插件（强制）&gt; 用户组配置 &gt; 个人设置 &gt; 默认状态
     </p>
-    <p v-if="error" class="notice">{{ error }}</p>
+    <p v-if="error" class="notice" role="alert">{{ error }}</p>
 
-    <h3>🔴 全局插件（强制生效，不可禁用）</h3>
+    <h3><span aria-hidden="true">🔴</span> 全局插件（强制生效，不可禁用）</h3>
     <div class="grid">
       <div v-for="plugin in globals" :key="plugin.id" class="card plugin">
         <header>
@@ -51,13 +51,20 @@ onMounted(load)
         <div class="perm">权限：{{ plugin.permissions.join(', ') || '无网络 / 无文件' }}</div>
         <div class="foot">
           <span class="src">{{ sourceLabel[plugin.state_source] }}</span>
-          <button class="switch on lock" disabled />
+          <button
+            class="switch on lock"
+            type="button"
+            role="switch"
+            aria-checked="true"
+            :aria-label="`${plugin.name}（全局强制，不可禁用）`"
+            disabled
+          />
         </div>
       </div>
       <p v-if="!globals.length" class="empty">暂无全局插件。</p>
     </div>
 
-    <h3>🟢 可选插件（用户可启停）</h3>
+    <h3><span aria-hidden="true">🟢</span> 可选插件（用户可启停）</h3>
     <div class="grid">
       <div v-for="plugin in optionals" :key="plugin.id" class="card plugin">
         <header>
@@ -70,6 +77,10 @@ onMounted(load)
           <span class="src">{{ sourceLabel[plugin.state_source] }}</span>
           <button
             class="switch"
+            type="button"
+            role="switch"
+            :aria-checked="plugin.enabled"
+            :aria-label="`${plugin.enabled ? '停用' : '启用'} ${plugin.name}`"
             :class="{ on: plugin.enabled, lock: plugin.state_source === 'group' }"
             :disabled="plugin.state_source === 'group'"
             @click="toggle(plugin)"

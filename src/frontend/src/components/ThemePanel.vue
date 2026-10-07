@@ -6,10 +6,18 @@ const colors = ['#2e6e63', '#3a5f8a', '#8a5a3a', '#6a4a8a']
 </script>
 
 <template>
-  <aside v-if="theme.panelOpen" class="panel">
+  <aside
+    v-if="theme.panelOpen"
+    id="theme-panel"
+    class="panel"
+    role="region"
+    aria-label="外观定制"
+  >
     <header>
       <h3>外观定制</h3>
-      <button class="btn small" @click="theme.panelOpen = false">✕</button>
+      <button class="btn small" type="button" aria-label="关闭外观面板" @click="theme.panelOpen = false">
+        ✕
+      </button>
     </header>
     <label class="row">
       侧边栏宽度 {{ theme.settings.sidebarWidth }}px
@@ -38,8 +46,11 @@ const colors = ['#2e6e63', '#3a5f8a', '#8a5a3a', '#6a4a8a']
           v-for="c in colors"
           :key="c"
           class="sw"
+          type="button"
           :class="{ sel: theme.settings.color === c }"
           :style="{ background: c }"
+          :aria-label="`主题色 ${c}`"
+          :aria-pressed="theme.settings.color === c"
           @click="theme.update({ color: c })"
         />
       </span>
