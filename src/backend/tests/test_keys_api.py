@@ -8,7 +8,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from app.services.keys import ProbeResult
-from tests.conftest import promote_to_admin, register
+from tests.conftest import chat, promote_to_admin, register
 
 SECRET = "sk-supersecret-abcdef1234567890"
 
@@ -180,6 +180,34 @@ def test_models_exclude_disabled(client: TestClient) -> None:
     created = _create_private(client)
     client.patch(f"/api/keys/{created['id']}", json={"status": "disabled"})
     assert client.get("/api/keys/models").json()["data"] == []
+
+
+def test_available_keys_with_usage(client: TestClient, db_path: Path) -> None:
+    register(client, "admin")
+    promote_to_admin(db_path, "admin")
+    client.post(
+        "/api/keys",
+        json={
+            "provider_name": "公共池",
+            "api_key": "sk-public-deepseek",
+            "base_url": "https://api.deepseek.com/v1",
+            "models": ["deepseek-chat"],
+            "is_public": True,
+        },
+    )
+    client.post("/api/auth/logout")
+
+    register(client, "bob")
+    _create_private(client)
+    chat(client)
+
+    items = client.get("/api/keys/available").json()["data"]
+    by_pool = {item["pool"]: item for item in items}
+    assert set(by_pool) == {"private", "public"}
+    assert by_pool["private"]["usage_scope"] == "personal"
+    assert by_pool["public"]["usage_scope"] == "global"
+    assert by_pool["private"]["usage"]["calls"] >= 1
+    assert by_pool["public"]["masked_key"].startswith("sk-")
 
 
 def test_admin_public_key_and_isolation(client: TestClient, db_path: Path) -> None:

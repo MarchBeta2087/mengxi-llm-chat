@@ -1,13 +1,24 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ApiError, api, streamChat } from '../api/client'
-import type { Conversation, Message, SearchHit } from '../api/types'
+import type { AvailableKey, Conversation, Message, SearchHit } from '../api/types'
 
 const conversations = ref<Conversation[]>([])
 const current = ref<Conversation | null>(null)
 const messages = ref<Message[]>([])
-const models = ref<string[]>([])
+const available = ref<AvailableKey[]>([])
+const showModels = ref(false)
 const model = ref('gpt-4o')
+
+const models = computed(() => {
+  const list: string[] = []
+  for (const key of available.value) {
+    for (const item of key.models) {
+      if (!list.includes(item)) list.push(item)
+    }
+  }
+  return list
+})
 const input = ref('')
 const streaming = ref(false)
 const error = ref('')
@@ -117,14 +128,31 @@ async function send() {
   }
 }
 
-onMounted(async () => {
-  await loadConversations()
+async function loadAvailable() {
   try {
-    models.value = await api.models()
-    if (models.value.length) model.value = models.value[0]
+    const data = await api.availableKeys()
+    available.value = Array.isArray(data) ? data : []
+    if (models.value.length && !models.value.includes(model.value)) {
+      model.value = models.value[0]
+    }
   } catch {
     /* 尚无密钥时忽略 */
   }
+}
+
+function openModels() {
+  showModels.value = true
+  void loadAvailable()
+}
+
+function pickModel(value: string) {
+  model.value = value
+  showModels.value = false
+}
+
+onMounted(async () => {
+  await loadConversations()
+  await loadAvailable()
 })
 </script>
 
@@ -177,10 +205,7 @@ onMounted(async () => {
 
     <section class="main">
       <header class="topbar">
-        <select v-model="model" class="model">
-          <option v-if="!models.length" :value="model">{{ model }}</option>
-          <option v-for="m in models" :key="m" :value="m">{{ m }}</option>
-        </select>
+        <button class="model-btn" @click="openModels">🧠 {{ model }} ▾</button>
         <span class="tag">{{ current?.encrypted ? '已加密存储 🔒' : '未加密' }}</span>
       </header>
 
@@ -204,6 +229,44 @@ onMounted(async () => {
         </button>
       </footer>
     </section>
+
+    <div v-if="showModels" class="modal-mask" @click.self="showModels = false">
+      <div class="modal">
+        <header class="modal-head">
+          <h3>选择模型</h3>
+          <button class="btn small" @click="showModels = false">✕</button>
+        </header>
+        <p class="hint">展示名 · 脱敏 Key · 模型 · 用量（全局/个人）</p>
+        <p v-if="!available.length" class="empty">
+          暂无可用的 Key，请先在「我的 Key」添加，或联系管理员配置公有池。
+        </p>
+        <div v-for="key in available" :key="key.id" class="key-row">
+          <div class="key-head">
+            <strong>{{ key.provider_name }}</strong>
+            <span class="tag" :class="{ priv: key.pool === 'private' }">
+              {{ key.pool === 'public' ? '全局' : '个人' }}
+            </span>
+            <code>{{ key.masked_key }}</code>
+            <span class="usage">
+              {{ key.usage_scope === 'global' ? '全局用量' : '个人用量' }}：
+              {{ key.usage.calls }} 次 · {{ key.usage.tokens_in + key.usage.tokens_out }} tokens
+            </span>
+          </div>
+          <div class="chips">
+            <button
+              v-for="item in key.models"
+              :key="item"
+              class="chip"
+              :class="{ on: item === model }"
+              @click="pickModel(item)"
+            >
+              {{ item }}
+            </button>
+            <span v-if="!key.models.length" class="muted">（未声明模型）</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -213,7 +276,7 @@ onMounted(async () => {
   height: 100vh;
 }
 .convs {
-  width: 240px;
+  width: var(--sidebar-width);
   flex-shrink: 0;
   border-right: 1px solid var(--line);
   background: var(--surface);
@@ -362,5 +425,105 @@ onMounted(async () => {
   border-radius: 12px;
   padding: 10px 12px;
   background: var(--surface);
+}
+.model-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+}
+.model-btn:hover {
+  border-color: var(--xi);
+  color: var(--xi);
+}
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+}
+.modal {
+  width: min(640px, 92vw);
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px;
+}
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.modal-head h3 {
+  font-size: 15px;
+  color: var(--xi-dark);
+}
+.hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.key-row {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.key-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.key-head code {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+.usage {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chip {
+  font-size: 12px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 4px 12px;
+  background: var(--surface);
+}
+.chip:hover {
+  border-color: var(--xi);
+  color: var(--xi);
+}
+.chip.on {
+  color: #fff;
+  background: var(--xi);
+  border-color: var(--xi);
+}
+.muted,
+.empty {
+  font-size: 12px;
+  color: var(--muted);
+}
+.empty {
+  text-align: center;
+  padding: 16px;
 }
 </style>

@@ -63,3 +63,22 @@ class KeyTestResult(BaseModel):
     status_code: int
     latency_ms: int
     error: str | None = None
+
+
+class KeyUsage(BaseModel):
+    calls: int = 0
+    tokens_in: int = 0
+    tokens_out: int = 0
+
+
+class AvailableKeyRead(BaseModel):
+    """聊天可用 Key（脱敏 + 用量），供模型选择弹窗使用。"""
+
+    id: uuid.UUID
+    provider_name: str
+    masked_key: str
+    models: list[str]
+    pool: str
+    usage_scope: str  # global（公有池） / personal（私有）
+    last_used_at: datetime | None = None
+    usage: KeyUsage

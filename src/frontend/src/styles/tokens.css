@@ -50,6 +50,7 @@ a {
 button {
   font: inherit;
   cursor: pointer;
+  color: var(--ink);
 }
 
 input,
@@ -59,9 +60,17 @@ textarea {
   color: var(--ink);
 }
 
+/* 深色模式下原生下拉选项对比度 */
+select,
+option {
+  background-color: var(--surface);
+  color: var(--ink);
+}
+
 .btn {
   border: 1px solid var(--line);
   background: var(--surface);
+  color: var(--ink);
   border-radius: 8px;
   padding: 6px 12px;
 }

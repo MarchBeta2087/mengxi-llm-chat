@@ -141,6 +141,34 @@ class AuditRepository:
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
+    async def usage_by_key(
+        self, key_ids: list[uuid.UUID], *, user_id: uuid.UUID | None = None
+    ) -> dict[uuid.UUID, dict]:
+        """按 Key 聚合调用次数与 tokens（可限定某个用户，用于个人用量）。"""
+        if not key_ids:
+            return {}
+        stmt = (
+            select(
+                AuditLog.key_id,
+                func.count(),
+                func.coalesce(func.sum(AuditLog.tokens_in), 0),
+                func.coalesce(func.sum(AuditLog.tokens_out), 0),
+            )
+            .where(AuditLog.key_id.in_(key_ids))
+            .group_by(AuditLog.key_id)
+        )
+        if user_id is not None:
+            stmt = stmt.where(AuditLog.user_id == user_id)
+        result = await self.session.execute(stmt)
+        return {
+            row[0]: {
+                "calls": int(row[1]),
+                "tokens_in": int(row[2]),
+                "tokens_out": int(row[3]),
+            }
+            for row in result.all()
+        }
+
 
 class PluginRepository:
     def __init__(self, session: AsyncSession) -> None:

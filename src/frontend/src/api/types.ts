@@ -99,3 +99,20 @@ export interface BuiltinPlugin {
   default_state: 'enabled' | 'disabled'
   runtime: Record<string, number>
 }
+
+export interface KeyUsage {
+  calls: number
+  tokens_in: number
+  tokens_out: number
+}
+
+export interface AvailableKey {
+  id: string
+  provider_name: string
+  masked_key: string
+  models: string[]
+  pool: 'public' | 'private'
+  usage_scope: 'global' | 'personal'
+  last_used_at: string | null
+  usage: KeyUsage
+}
