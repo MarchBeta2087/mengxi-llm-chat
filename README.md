@@ -45,6 +45,32 @@
 - **存储**：PostgreSQL 17（唯一官方支持）+ Redis 8
 - **部署**：Docker Compose
 
+## 界面预览
+
+> 截图由 `pnpm screenshots` 自动生成：Playwright 驱动、SQLite + 内存 Redis +
+> 确定性假上游，演示账号 `newuser` / `admin`（口令均为 `12345678`），无需真实 LLM。
+
+| 聊天（浅色） | 模型选择 | 聊天（深色） |
+| --- | --- | --- |
+| ![聊天](docs/screenshots/02-chat.png) | ![模型选择](docs/screenshots/03-model-modal.png) | ![深色模式](docs/screenshots/09-chat-dark.png) |
+
+| 我的 Key | 插件 | 关于 / 许可 |
+| --- | --- | --- |
+| ![我的 Key](docs/screenshots/05-keys.png) | ![插件](docs/screenshots/06-plugins.png) | ![关于](docs/screenshots/08-about.png) |
+
+| 管理后台 · 用户 | 管理后台 · 公有 Key | 管理后台 · 审计 |
+| --- | --- | --- |
+| ![用户](docs/screenshots/10-admin-users.png) | ![公有 Key](docs/screenshots/11-admin-keys.png) | ![审计](docs/screenshots/13-admin-audit.png) |
+
+更多截图（登录、流式回复、设置、管理后台插件/用户组）见
+[`docs/screenshots/`](docs/screenshots/)。重新生成：
+
+```bash
+cd src/frontend
+pnpm exec playwright install chromium   # 仅首次
+pnpm screenshots
+```
+
 ## 快速开始
 
 ### 方式一：Docker Compose（推荐）
