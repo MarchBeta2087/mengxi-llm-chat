@@ -391,7 +391,7 @@ onMounted(async () => {
   justify-content: center;
   background: var(--bubble-user);
 }
-.msg.ai .avatar {
+.msg.assistant .avatar {
   background: var(--xi);
   color: #fff;
   font-family: serif;
@@ -404,7 +404,7 @@ onMounted(async () => {
   white-space: pre-wrap;
   word-break: break-word;
 }
-.msg.ai .bubble {
+.msg.assistant .bubble {
   background: var(--bubble-ai);
   border: 1px solid var(--line);
 }
