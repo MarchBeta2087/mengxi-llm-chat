@@ -15,6 +15,27 @@ docker run --rm -v "$PWD:/app" -w /app orhunp/git-cliff:latest --output CHANGELO
 docker run --rm -v "$PWD:/app" -w /app orhunp/git-cliff:latest --unreleased --strip header
 ```
 
+## [1.0.0] - 2026-10-07
+
+首个正式版本：M1–M5 里程碑全部落地，并补齐发布所需的社区与文档材料。
+
+### 新增
+
+- **关于页**：版本号、BSD-3-Clause 完整许可证声明、第三方组件许可与贡献入口。
+- **社区健康文件**：行为准则、贡献指南、Bug / 功能建议 Issue 模板与 PR 模板。
+- **自动化截图**：`pnpm screenshots` 一键生成 `docs/screenshots/`
+  （Playwright + 演示账号 `newuser` / `admin`，无需真实 LLM）。
+
+### 变更
+
+- 版本号统一升级到 `1.0.0`（后端 `__version__` / `pyproject.toml`、前端 `package.json`）。
+- 侧边栏新增「关于」入口；`docs/screenshots/README.md` 记录截图清单与再生成方式。
+
+### 修复
+
+- 关于页 `package.json` 相对导入路径错误导致 `pnpm typecheck` 失败。
+- 聊天界面助手气泡样式选择器（`.msg.ai` → `.msg.assistant`）与消息角色不匹配。
+
 ## 里程碑概览
 
 | 里程碑 | 内容 |

@@ -15,6 +15,7 @@ function makeRouter() {
       { path: '/keys', component: { template: '<div />' } },
       { path: '/plugins', component: { template: '<div />' } },
       { path: '/settings', component: { template: '<div />' } },
+      { path: '/about', component: { template: '<div />' } },
       { path: '/admin', component: { template: '<div />' } },
     ],
   })
@@ -43,6 +44,7 @@ describe('AppLayout', () => {
     vi.spyOn(api, 'logout').mockResolvedValue(null)
     const { wrapper, auth } = await mountLayout('user')
 
+    expect(wrapper.text()).toContain('关于')
     expect(wrapper.text()).not.toContain('管理后台')
     await wrapper.find('.logout').trigger('click')
     await flushPromises()

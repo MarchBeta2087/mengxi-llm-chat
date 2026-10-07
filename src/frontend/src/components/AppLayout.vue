@@ -25,6 +25,7 @@ async function logout() {
       <RouterLink to="/keys" class="nav-link">🔑 我的 Key</RouterLink>
       <RouterLink to="/plugins" class="nav-link">🧩 插件</RouterLink>
       <RouterLink to="/settings" class="nav-link">⚙ 设置</RouterLink>
+      <RouterLink to="/about" class="nav-link">ℹ 关于</RouterLink>
       <RouterLink v-if="auth.isAdmin()" to="/admin" class="nav-link">🛡 管理后台</RouterLink>
       <div class="spacer" />
       <button class="nav-link" @click="theme.panelOpen = !theme.panelOpen">🎨 外观</button>

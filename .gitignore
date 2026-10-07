@@ -18,9 +18,10 @@ data/
 *.enc
 apikeys/
 
-# --- 本地实测数据库 ---
+# --- 本地实测数据库 / 截图运行数据 ---
 *.db
 *.sqlite3
+_shotsdata/
 
 # --- Node ---
 node_modules/
