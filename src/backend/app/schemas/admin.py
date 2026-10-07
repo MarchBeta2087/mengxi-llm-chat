@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from ipaddress import IPv4Address, IPv6Address
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.enums import UserRole, UserStatus
 
@@ -62,3 +63,11 @@ class AuditRead(BaseModel):
     fallback_to_public: bool
     client_ip: str | None
     created_at: datetime
+
+    @field_validator("client_ip", mode="before")
+    @classmethod
+    def _coerce_client_ip(cls, value: object) -> object:
+        # PostgreSQL INET 经 asyncpg 可能返回 ipaddress 对象，统一转为字符串
+        if isinstance(value, (IPv4Address, IPv6Address)):
+            return str(value)
+        return value

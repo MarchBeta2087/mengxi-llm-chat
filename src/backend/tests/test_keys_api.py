@@ -153,6 +153,35 @@ def test_models_endpoint(client: TestClient) -> None:
     assert models == ["gpt-4o", "claude-*"]
 
 
+def test_models_include_public_pool(client: TestClient, db_path: Path) -> None:
+    """普通用户的模型列表应包含私有 + 公有池（回归）。"""
+    register(client, "admin")
+    promote_to_admin(db_path, "admin")
+    client.post(
+        "/api/keys",
+        json={
+            "provider_name": "公共池",
+            "api_key": "sk-public-deepseek",
+            "base_url": "https://api.deepseek.com/v1",
+            "models": ["deepseek-chat"],
+            "is_public": True,
+        },
+    )
+    client.post("/api/auth/logout")
+
+    register(client, "bob")
+    _create_private(client, models=["gpt-4o"])
+    models = client.get("/api/keys/models").json()["data"]
+    assert {"gpt-4o", "deepseek-chat"} <= set(models)
+
+
+def test_models_exclude_disabled(client: TestClient) -> None:
+    register(client)
+    created = _create_private(client)
+    client.patch(f"/api/keys/{created['id']}", json={"status": "disabled"})
+    assert client.get("/api/keys/models").json()["data"] == []
+
+
 def test_admin_public_key_and_isolation(client: TestClient, db_path: Path) -> None:
     register(client, "admin")
     promote_to_admin(db_path, "admin")

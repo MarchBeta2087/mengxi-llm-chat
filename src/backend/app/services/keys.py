@@ -135,6 +135,12 @@ class KeysService:
             return await self.keys.list_public()
         return await self.keys.list_private_for_user(user.id)
 
+    async def available_keys(self, user: User) -> list[ApiKey]:
+        """用户实际可用的 Key 池：私有 + 公有（仅启用中）。"""
+        private = await self.keys.list_private_for_user(user.id)
+        public = await self.keys.list_public()
+        return [key for key in (*private, *public) if key.status == KeyStatus.ACTIVE.value]
+
     async def get_manageable(self, user: User, key_id: uuid.UUID) -> ApiKey:
         key = await self.keys.get(key_id)
         if key is None:
