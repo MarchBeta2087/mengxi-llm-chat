@@ -129,6 +129,8 @@ class KeysService:
         return api_key
 
     async def list(self, user: User, *, pool: str | None = None) -> list[ApiKey]:
+        if pool == KeyPool.PUBLIC.value and not user.is_admin:
+            raise Forbidden("无权访问公有 Key 池")
         if pool == KeyPool.PRIVATE.value:
             return await self.keys.list_private_for_user(user.id)
         if user.is_admin and pool != KeyPool.PRIVATE.value:

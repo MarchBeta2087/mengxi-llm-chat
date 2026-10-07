@@ -20,6 +20,23 @@ def test_non_admin_forbidden(client: TestClient) -> None:
     assert client.get("/api/admin/groups").status_code == 403
 
 
+def test_kek_endpoints_require_admin(client: TestClient) -> None:
+    """P0-1：主密钥端点必须鉴权。"""
+    passphrase = {"passphrase": "x" * 12}
+    # 未登录
+    assert client.get("/api/admin/kek").status_code == 401
+    assert client.post("/api/admin/kek/lock").status_code == 401
+    assert client.post("/api/admin/kek/unlock", json=passphrase).status_code == 401
+    assert client.post("/api/admin/kek/initialize", json=passphrase).status_code == 401
+
+    # 普通用户
+    register(client, "bob")
+    assert client.get("/api/admin/kek").status_code == 403
+    assert client.post("/api/admin/kek/lock").status_code == 403
+    assert client.post("/api/admin/kek/unlock", json=passphrase).status_code == 403
+    assert client.post("/api/admin/kek/initialize", json=passphrase).status_code == 403
+
+
 def test_list_users_and_set_quota(client: TestClient, db_path: Path) -> None:
     _seed_admin(client, db_path)
     register(client, "bob")
