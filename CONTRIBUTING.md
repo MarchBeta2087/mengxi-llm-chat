@@ -32,21 +32,24 @@ pnpm dev                    # http://127.0.0.1:5173（/api 代理到 8000）
 
 | 分支 | 用途 |
 | --- | --- |
-| `main` | 稳定分支；仅通过 PR 合入，且 **CI 必须全绿** |
-| `dev` | （规划中）集成分支；日常特性先并入 dev，再批量合入 main |
+| `main` | 稳定分支；仅通过 PR 合入，且 **CI 必须全绿**；每次发布在此打 tag |
+| `dev` | 集成分支；日常特性先并入 dev，验证后再批量合入 main |
 | `feature/*` | 新功能 |
 | `fix/*` | 缺陷修复 |
 | `docs/*` | 文档 |
 | `chore/*` | 构建/依赖/杂项 |
 
-> 当前尚未启用 `dev` 分支，PR 目标为 `main`；启用后本文将同步更新。
-
-创建分支：
+日常开发以 `dev` 为基线，发布时由维护者将 `dev`（或经评审的 `feature/*`）合入 `main` 并打 tag：
 
 ```bash
-git checkout main && git pull
+git checkout dev && git pull
 git checkout -b feature/your-feature
+# ... 开发与自测 ...
+git push -u origin feature/your-feature
+# 在 GitHub 上向 dev 发起 PR
 ```
+
+紧急热修复可直接基于 `main` 开 `fix/*`，修复合入 `main` 后同步回 `dev`。
 
 ---
 
@@ -100,7 +103,7 @@ CI 还会执行：依赖许可证扫描（无 GPL/AGPL）、`pip-audit`/`pnpm au
 
 ## 6. 提交 PR
 
-1. 推送到你的分支并创建 PR（目标 `main`），按 [PR 模板](.github/PULL_REQUEST_TEMPLATE.md) 填写；
+1. 推送到你的分支并创建 PR（日常目标 `dev`，发布/热修复目标 `main`），按 [PR 模板](.github/PULL_REQUEST_TEMPLATE.md) 填写；
 2. 确保 CI 全绿；如涉及界面变更，附**截图**（可用 `pnpm screenshots` 生成）；
 3. 保持 PR 聚焦、可评审；必要时补充测试与文档；
 4. 评审通过后由维护者合并（默认 Squash）。
