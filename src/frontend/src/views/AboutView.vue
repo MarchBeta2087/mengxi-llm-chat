@@ -73,10 +73,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.`
     <div class="card">
       <h3>第三方组件与许可</h3>
       <table>
+        <caption class="visually-hidden">第三方组件与许可证</caption>
         <thead>
           <tr>
-            <th>组件</th>
-            <th>许可</th>
+            <th scope="col">组件</th>
+            <th scope="col">许可</th>
           </tr>
         </thead>
         <tbody>
@@ -104,6 +105,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.`
         <li>
           <a :href="`${repo}/blob/main/CODE_OF_CONDUCT.md`" target="_blank" rel="noreferrer">
             行为准则
+          </a>
+        </li>
+        <li>
+          <a :href="`${repo}/blob/main/SECURITY.md`" target="_blank" rel="noreferrer">
+            安全政策（漏洞报告）
+          </a>
+        </li>
+        <li>
+          <a :href="`${repo}/blob/main/ACCESSIBILITY.md`" target="_blank" rel="noreferrer">
+            无障碍声明
           </a>
         </li>
       </ul>
