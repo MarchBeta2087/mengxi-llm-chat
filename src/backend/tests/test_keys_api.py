@@ -118,6 +118,29 @@ def test_owner_isolation(client: TestClient) -> None:
     assert client.delete(f"/api/keys/{key_id}").status_code == 403
 
 
+def test_non_admin_public_pool_forbidden(client: TestClient, db_path: Path) -> None:
+    """P2-5：普通用户显式请求公有池返回 403，而非静默回退。"""
+    register(client, "admin")
+    promote_to_admin(db_path, "admin")
+    client.post(
+        "/api/keys",
+        json={
+            "provider_name": "公共池",
+            "api_key": "sk-public-deepseek",
+            "base_url": "https://api.deepseek.com/v1",
+            "is_public": True,
+        },
+    )
+    client.post("/api/auth/logout")
+
+    register(client, "bob")
+    _create_private(client)
+    assert client.get("/api/keys", params={"pool": "public"}).status_code == 403
+    # 私有池与默认列表不受影响
+    assert client.get("/api/keys", params={"pool": "private"}).status_code == 200
+    assert client.get("/api/keys").status_code == 200
+
+
 def test_connectivity_test_records_audit(client: TestClient, db_path: Path, monkeypatch) -> None:
     class _FakeProbe:
         def __init__(self, policy) -> None:

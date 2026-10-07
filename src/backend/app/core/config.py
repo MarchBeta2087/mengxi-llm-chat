@@ -53,7 +53,6 @@ class Settings(BaseSettings):
     session_max_age: int = 60 * 60 * 24 * 7  # 7 天
 
     # --- 策略 ---
-    allow_anonymous: bool = False
     fallback_to_public: bool = True
     audit_retention_days: int = Field(default=90, ge=1)
     encrypted_search: bool = False  # 加密会话盲索引全文检索（默认关闭）

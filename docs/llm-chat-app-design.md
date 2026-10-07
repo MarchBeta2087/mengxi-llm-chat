@@ -193,7 +193,9 @@ cipher_blob = alg(1B) || key_gen(1B) || iv(12B) || ciphertext(N) || tag(16B)
 | --- | --- | --- | --- | --- |
 | A 完整 | 管理员口令 Argon2id | KEK 加密后落文件（600） | 每次重启需口令解锁 | `LocalKekProvider` |
 | B 折中 | `.env` 中的 32B 主密钥 | 同一主密钥加密 DEK 落文件 | 启动自动解锁 | `EnvKekProvider` |
-| C 生产 | 外部 KMS（AWS KMS/Vault） | KMS 托管/应用仅缓存 DEK | 启动自动取 DEK | `KmsKekProvider` |
+| C 生产（路线图） | 外部 KMS（AWS KMS/Vault） | KMS 托管/应用仅缓存 DEK | 启动自动取 DEK | `KmsKekProvider` |
+
+> **实现状态**：档 A / B 已在 v1.0 落地；档 C 目前仅为接口占位（`KmsKekProvider` 抛 `NotImplementedError`），计划在后续版本接入 AWS KMS / Vault。多实例部署暂请使用档 B，或按 `KekProvider` 协议自行扩展。
 
 统一接口：
 
@@ -663,7 +665,6 @@ CREATE TABLE messages (
   content_encrypted TEXT NOT NULL,                   -- Base64(版本||IV||密文||tag)
   tokens_in         INTEGER NOT NULL DEFAULT 0,
   tokens_out        INTEGER NOT NULL DEFAULT 0,
-  blind_index       JSONB,                           -- 可选，冗余指纹集合
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_messages_conv ON messages (conversation_id, created_at);
@@ -814,14 +815,15 @@ volumes: { pgdata: {} }
 | --- | --- | --- |
 | `MENGXI_KEK_PROFILE` | 主密钥档位 `A/B/C` | `A` |
 | `MENGXI_MASTER_KEY` | 档 B 的 32B 主密钥 | 空 |
-| `MENGXI_KMS_*` | 档 C 的 KMS 配置 | 空 |
+| `MENGXI_KMS_*` | 档 C 的 KMS 配置（路线图，v1.0 未实现） | 空 |
 | `MENGXI_DATABASE_URL` | PostgreSQL DSN | — |
 | `MENGXI_REDIS_URL` | Redis DSN | — |
-| `MENGXI_ALLOW_ANONYMOUS` | 匿名访问开关 | `false` |
 | `MENGXI_FALLBACK_TO_PUBLIC` | 私有回退公有 | `true` |
 | `MENGXI_DOMAIN_WHITELIST` | SSRF 白名单 | 空 |
 | `MENGXI_AUDIT_RETENTION_DAYS` | 审计保留天数 | `90` |
 | `MENGXI_ARGON2_*` | Argon2id 参数 | 见 §3.3 |
+
+> 匿名访问（环境变量 `MENGXI_ALLOW_ANONYMOUS`）为路线图能力，v1.0 未实现，暂不提供该开关。
 
 ### 13.3 可观测性
 
@@ -936,7 +938,9 @@ src/
 1. E2EE 敏感会话模式实现路线（WebCrypto + 客户端直连 vs 独立代理）——路线图，v1 不做；
 2. 会话标题是否默认加密——当前设计为明文、可配置；
 3. 盲索引短词（< 2 字）——当前**不建索引**以规避频率泄露；
-4. 审计保留 90 天是否需要自动归档至对象存储——当前设计为可配置清理，归档待定。
+4. 审计保留 90 天是否需要自动归档至对象存储——当前设计为可配置清理，归档待定；
+5. 档 C（KMS，AWS KMS/Vault）接入——v1.0 仅接口占位，后续版本实现；
+6. 匿名访问（`anonymous` 角色）——v1.0 未实现，待产品决策后启用。
 
 ---
 
