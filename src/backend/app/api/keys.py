@@ -14,6 +14,7 @@ from app.api.deps import (
     get_ssrf_policy,
 )
 from app.core.ssrf import SsrfPolicy
+from app.models.enums import KeyStatus
 from app.models.user import User
 from app.schemas.keys import KeyCreate, KeyUpdate
 from app.services.key_manager import KeyManager
@@ -112,8 +113,20 @@ async def list_models(
     key_manager: KeyManager = Depends(get_key_manager),
     policy: SsrfPolicy = Depends(get_ssrf_policy),
 ) -> dict:
-    """由当前可用 Key 池推导的模型列表（去重）。"""
-    keys = await _service(session, key_manager, policy).list(user, pool=pool)
+    """由当前可用 Key 池推导的模型列表（去重）。
+
+    - 未指定 pool：用户可用池（私有 + 公有，仅启用中）；
+    - 指定 pool：仅该池且启用中。
+    """
+    service = _service(session, key_manager, policy)
+    if pool is None:
+        keys = await service.available_keys(user)
+    else:
+        keys = [
+            key
+            for key in await service.list(user, pool=pool)
+            if key.status == KeyStatus.ACTIVE.value
+        ]
     models: list[str] = []
     for key in keys:
         for model in key.models_json or []:
