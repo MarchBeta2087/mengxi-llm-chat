@@ -44,6 +44,20 @@ async function mockApi(page: Page, state: MockState): Promise<void> {
     }
     if (path.endsWith('/messages')) return ok([])
     if (path === '/api/keys/models') return ok(['gpt-4o'])
+    if (path === '/api/keys/available') {
+      return ok([
+        {
+          id: 'k1',
+          provider_name: '默认通道',
+          masked_key: 'sk-...abcd',
+          models: ['gpt-4o'],
+          pool: 'private',
+          usage_scope: 'personal',
+          last_used_at: null,
+          usage: { calls: 1, tokens_in: 5, tokens_out: 3 },
+        },
+      ])
+    }
     if (path === '/api/chat/completions') {
       const sse =
         'event: meta\ndata: {"conversation_id":"c1"}\n\n' +
@@ -117,6 +131,18 @@ test('可退出登录', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: '梦溪畅谈' })).toBeVisible()
   await expect(page.getByLabel('用户名')).toBeVisible()
+})
+
+test('模型弹窗展示可用 Key 与用量', async ({ page }) => {
+  const state: MockState = { authed: true }
+  await mockApi(page, state)
+
+  await page.goto('/')
+  await page.getByRole('button', { name: /🧠/ }).click()
+  await expect(page.getByText('默认通道')).toBeVisible()
+  await expect(page.getByText(/个人用量/)).toBeVisible()
+  await page.getByRole('button', { name: 'gpt-4o', exact: true }).click()
+  await expect(page.getByRole('button', { name: /🧠/ })).toBeVisible()
 })
 
 test('管理员可访问管理后台各标签', async ({ page }) => {

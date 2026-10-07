@@ -141,6 +141,22 @@ class KeysService:
         public = await self.keys.list_public()
         return [key for key in (*private, *public) if key.status == KeyStatus.ACTIVE.value]
 
+    async def available_with_usage(self, user: User) -> list[tuple[ApiKey, dict, str]]:
+        """可用 Key 及其用量：私有看个人用量，公有看全局用量。"""
+        keys = await self.available_keys(user)
+        private_ids = [key.id for key in keys if key.user_id == user.id]
+        public_ids = [key.id for key in keys if key.user_id is None]
+        personal = await self.audit.usage_by_key(private_ids, user_id=user.id)
+        global_usage = await self.audit.usage_by_key(public_ids)
+        empty = {"calls": 0, "tokens_in": 0, "tokens_out": 0}
+        result: list[tuple[ApiKey, dict, str]] = []
+        for key in keys:
+            if key.user_id is None:
+                result.append((key, global_usage.get(key.id, empty), "global"))
+            else:
+                result.append((key, personal.get(key.id, empty), "personal"))
+        return result
+
     async def get_manageable(self, user: User, key_id: uuid.UUID) -> ApiKey:
         key = await self.keys.get(key_id)
         if key is None:

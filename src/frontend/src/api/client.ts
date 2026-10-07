@@ -1,6 +1,7 @@
 import type {
   AdminPlugin,
   ApiKey,
+  AvailableKey,
   BuiltinPlugin,
   Conversation,
   GroupPluginEntry,
@@ -74,6 +75,7 @@ export const api = {
       { method: 'POST' },
     ),
   models: () => request<string[]>('/api/keys/models'),
+  availableKeys: () => request<AvailableKey[]>('/api/keys/available'),
 
   // 会话
   listConversations: (includeArchived = false) =>

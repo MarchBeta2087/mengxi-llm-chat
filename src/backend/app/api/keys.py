@@ -16,7 +16,7 @@ from app.api.deps import (
 from app.core.ssrf import SsrfPolicy
 from app.models.enums import KeyStatus
 from app.models.user import User
-from app.schemas.keys import KeyCreate, KeyUpdate
+from app.schemas.keys import AvailableKeyRead, KeyCreate, KeyUpdate
 from app.services.key_manager import KeyManager
 from app.services.keys import KeysService, key_to_read
 
@@ -133,3 +133,29 @@ async def list_models(
             if model not in models:
                 models.append(model)
     return {"code": 0, "data": models, "message": "ok"}
+
+
+@router.get("/available", include_in_schema=True)
+async def list_available_keys(
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+    key_manager: KeyManager = Depends(get_key_manager),
+    policy: SsrfPolicy = Depends(get_ssrf_policy),
+) -> dict:
+    """当前用户可用的 Key（私有 + 公有，脱敏，含用量），供模型选择弹窗使用。"""
+    service = _service(session, key_manager, policy)
+    items = await service.available_with_usage(user)
+    data = [
+        AvailableKeyRead(
+            id=key.id,
+            provider_name=key.provider_name,
+            masked_key=key.key_fingerprint,
+            models=list(key.models_json or []),
+            pool=key.priority_pool,
+            usage_scope=scope,
+            last_used_at=key.last_used_at,
+            usage=usage,
+        ).model_dump(mode="json")
+        for key, usage, scope in items
+    ]
+    return {"code": 0, "data": data, "message": "ok"}
