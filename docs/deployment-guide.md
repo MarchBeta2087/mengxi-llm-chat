@@ -122,7 +122,6 @@ python scripts/install_builtin_plugins.py --base http://<主机>:8080 \
 | `MENGXI_DATABASE_URL` | postgresql+asyncpg://… | 数据库 |
 | `MENGXI_REDIS_URL` | redis://localhost:6379/0 | Redis |
 | `MENGXI_SESSION_SECRET` | dev-insecure… | **生产必改**，会话签名 |
-| `MENGXI_ALLOW_ANONYMOUS` | false | 匿名访问开关 |
 | `MENGXI_FALLBACK_TO_PUBLIC` | true | 私有 Key 失败回退公有 |
 | `MENGXI_USER_RATE_LIMITS` | 空 | 用户级兜底限流（JSON） |
 | `MENGXI_IP_RATE_LIMITS` | 空 | IP 级兜底限流（JSON） |

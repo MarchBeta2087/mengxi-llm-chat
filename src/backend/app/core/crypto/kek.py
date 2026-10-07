@@ -203,15 +203,15 @@ class EnvKekProvider(KekProvider):
 
 
 class KmsKekProvider(KekProvider):
-    """档 C：外部 KMS 托管 KEK（M5 接入，先占位）。"""
+    """档 C：外部 KMS 托管 KEK（路线图能力，v1.0 尚未实现，仅保留接口占位）。"""
 
     profile = "C"
 
     async def initialize(self, passphrase: str | None = None) -> None:
-        raise NotImplementedError("KMS 档 C 将在 M5 实现")
+        raise NotImplementedError("KMS 档 C 尚未实现（路线图）")
 
     async def unlock(self, passphrase: str | None = None) -> None:
-        raise NotImplementedError("KMS 档 C 将在 M5 实现")
+        raise NotImplementedError("KMS 档 C 尚未实现（路线图）")
 
 
 def argon_params_from_settings(settings: Settings) -> Argon2Params:

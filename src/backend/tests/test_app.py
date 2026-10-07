@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
 from app.core.config import Settings
 from app.main import create_app
+from tests.conftest import login, promote_to_admin, register
 
 
 def test_healthz(tmp_path) -> None:
@@ -16,10 +19,13 @@ def test_healthz(tmp_path) -> None:
     assert resp.json()["status"] == "ok"
 
 
-def test_kek_status_uninitialized(tmp_path) -> None:
-    app = create_app(Settings(kek_profile="A", data_dir=tmp_path))
-    with TestClient(app) as client:
-        resp = client.get("/api/admin/kek")
+def test_kek_status_uninitialized(client_factory, db_path: Path) -> None:
+    client = client_factory(kek_profile="A", master_key_b64=None)
+    register(client, "admin")
+    promote_to_admin(db_path, "admin")
+    login(client, "admin")
+
+    resp = client.get("/api/admin/kek")
     assert resp.status_code == 200
     body = resp.json()
     assert body["data"]["profile"] == "A"

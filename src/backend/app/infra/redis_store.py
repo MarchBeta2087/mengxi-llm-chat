@@ -104,6 +104,10 @@ class RedisStore:
         if keys:
             await self.client.delete(*keys)
 
+    async def ttl(self, key: str) -> int:
+        """剩余存活秒数：-1 表示无过期，-2 表示键不存在。"""
+        return int(await self.client.ttl(key))
+
     # --- 限流 ---
     async def check_and_consume(self, counters: list[Counter]) -> LimitDecision:
         if not counters:

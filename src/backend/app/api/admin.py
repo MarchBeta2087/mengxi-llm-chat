@@ -11,7 +11,8 @@ from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_session, require_admin
-from app.core.errors import BadRequest, NotFound
+from app.core.errors import BadRequest, NotFound, RateLimited, WrongPassphrase
+from app.models.user import User
 from app.repositories import AuditRepository, GroupRepository, UserRepository
 from app.schemas.admin import (
     AuditRead,
@@ -39,6 +40,20 @@ def _ok(data, message: str = "ok") -> dict:
     return {"code": 0, "data": data, "message": message}
 
 
+async def _ensure_unlock_not_locked(
+    request: Request, lock_keys: tuple[str, ...], *, threshold: int, lock_seconds: int
+) -> None:
+    """按 IP 与账号双维度校验主口令失败计数，达阈值即拒绝解锁。"""
+    redis = request.app.state.redis_store
+    for key in lock_keys:
+        failures = await redis.get_int(key)
+        if failures < threshold:
+            continue
+        ttl = await redis.ttl(key)
+        minutes = max(1, (ttl + 59) // 60) if ttl and ttl > 0 else max(1, lock_seconds // 60)
+        raise RateLimited(f"主口令尝试次数过多，请在约 {minutes} 分钟后重试")
+
+
 def _recovery_service(request: Request, session: AsyncSession) -> RecoveryService:
     return RecoveryService(
         session,
@@ -51,7 +66,7 @@ def _recovery_service(request: Request, session: AsyncSession) -> RecoveryServic
 
 # --- 主密钥 ---
 @router.get("/kek")
-async def kek_status(request: Request) -> dict:
+async def kek_status(request: Request, _: object = Depends(require_admin)) -> dict:
     provider = request.app.state.kek_provider
     if provider is None:
         return {
@@ -66,7 +81,11 @@ async def kek_status(request: Request) -> dict:
 
 
 @router.post("/kek/initialize")
-async def kek_initialize(body: PassphraseRequest, request: Request) -> dict:
+async def kek_initialize(
+    body: PassphraseRequest,
+    request: Request,
+    _: object = Depends(require_admin),
+) -> dict:
     provider = _provider(request)
     await provider.initialize(body.passphrase)
     request.app.state.key_manager.reset()
@@ -81,15 +100,35 @@ async def kek_initialize(body: PassphraseRequest, request: Request) -> dict:
 
 
 @router.post("/kek/unlock")
-async def kek_unlock(body: PassphraseRequest, request: Request) -> dict:
+async def kek_unlock(
+    body: PassphraseRequest,
+    request: Request,
+    admin: User = Depends(require_admin),
+) -> dict:
     provider = _provider(request)
-    await provider.unlock(body.passphrase)
+    settings = request.app.state.settings
+    client_ip = request.client.host if request.client else "unknown"
+    lock_keys = (f"lock:kek:ip:{client_ip}", f"lock:kek:user:{admin.id}")
+    await _ensure_unlock_not_locked(
+        request,
+        lock_keys,
+        threshold=settings.kek_lock_threshold,
+        lock_seconds=settings.kek_lock_seconds,
+    )
+    try:
+        await provider.unlock(body.passphrase)
+    except WrongPassphrase:
+        redis = request.app.state.redis_store
+        for key in lock_keys:
+            await redis.incr(key, ttl=settings.kek_lock_seconds)
+        raise
+    await request.app.state.redis_store.delete(*lock_keys)
     request.app.state.key_manager.reset()
     return _ok(provider.status())
 
 
 @router.post("/kek/lock")
-async def kek_lock(request: Request) -> dict:
+async def kek_lock(request: Request, _: object = Depends(require_admin)) -> dict:
     provider = _provider(request)
     provider.lock()
     request.app.state.key_manager.reset()
