@@ -85,8 +85,8 @@ onMounted(load)
 <template>
   <div class="card">
     <h3>主密钥与恢复码（管理员）</h3>
-    <p v-if="error" class="notice">{{ error }}</p>
-    <p v-if="info" class="notice ok">{{ info }}</p>
+    <p v-if="error" class="notice" role="alert">{{ error }}</p>
+    <p v-if="info" class="notice ok" role="status">{{ info }}</p>
 
     <div class="row">
       <span>档位 / 状态</span>
@@ -99,30 +99,43 @@ onMounted(load)
 
     <div class="ops">
       <template v-if="kek?.state === 'uninitialized'">
-        <input v-model="passphrase" type="password" placeholder="设置主口令（≥8 位）" />
-        <button class="btn primary small" @click="initialize">初始化并生成恢复码</button>
+        <input
+          v-model="passphrase"
+          type="password"
+          aria-label="设置主口令"
+          placeholder="设置主口令（≥8 位）"
+        />
+        <button class="btn primary small" type="button" @click="initialize">
+          初始化并生成恢复码
+        </button>
       </template>
       <template v-else-if="kek?.state === 'locked'">
         <input
           v-model="passphrase"
           type="password"
+          aria-label="主口令"
           placeholder="主口令"
           @keyup.enter="unlock"
         />
-        <button class="btn primary small" @click="unlock">解锁</button>
+        <button class="btn primary small" type="button" @click="unlock">解锁</button>
       </template>
       <template v-else>
-        <button class="btn small" @click="lock">锁定</button>
-        <button class="btn small" @click="regenerate">重新生成恢复码</button>
+        <button class="btn small" type="button" @click="lock">锁定</button>
+        <button class="btn small" type="button" @click="regenerate">重新生成恢复码</button>
       </template>
     </div>
 
     <details class="reset">
       <summary>使用恢复码重置主口令</summary>
       <div class="ops">
-        <input v-model="code" placeholder="XXXX-XXXX-XXXX" />
-        <input v-model="newPassphrase" type="password" placeholder="新主口令（≥8 位）" />
-        <button class="btn small" @click="useCode">重置</button>
+        <input v-model="code" aria-label="恢复码" placeholder="XXXX-XXXX-XXXX" />
+        <input
+          v-model="newPassphrase"
+          type="password"
+          aria-label="新主口令"
+          placeholder="新主口令（≥8 位）"
+        />
+        <button class="btn small" type="button" @click="useCode">重置</button>
       </div>
     </details>
 
@@ -130,7 +143,7 @@ onMounted(load)
       <p class="warn">
         ⚠ 恢复码仅展示一次，请立即离线保存；使用或重置后，旧码全部失效。
       </p>
-      <div class="codes">
+      <div class="codes" role="group" aria-label="一次性恢复码">
         <code v-for="item in codes" :key="item">{{ item }}</code>
       </div>
       <div class="ops">

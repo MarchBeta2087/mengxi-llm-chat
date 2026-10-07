@@ -21,11 +21,13 @@ const tab = ref<TabKey>('users')
 <template>
   <div class="page">
     <h2>管理后台</h2>
-    <div class="tabs">
+    <div class="tabs" role="group" aria-label="管理后台标签">
       <button
         v-for="item in tabs"
         :key="item.key"
+        type="button"
         :class="{ on: tab === item.key }"
+        :aria-pressed="tab === item.key"
         @click="tab = item.key"
       >
         {{ item.label }}

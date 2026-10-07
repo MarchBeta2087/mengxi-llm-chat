@@ -46,8 +46,11 @@ onMounted(async () => {
             v-for="c in ['#2e6e63', '#3a5f8a', '#8a5a3a', '#6a4a8a']"
             :key="c"
             class="sw"
+            type="button"
             :class="{ sel: theme.settings.color === c }"
             :style="{ background: c }"
+            :aria-label="`主题色 ${c}`"
+            :aria-pressed="theme.settings.color === c"
             @click="theme.update({ color: c })"
           />
         </span>
@@ -56,6 +59,10 @@ onMounted(async () => {
         <span>深色模式</span>
         <button
           class="switch"
+          type="button"
+          role="switch"
+          aria-label="深色模式"
+          :aria-checked="theme.settings.mode === 'dark'"
           :class="{ on: theme.settings.mode === 'dark' }"
           @click="theme.update({ mode: theme.settings.mode === 'dark' ? 'light' : 'dark' })"
         />
@@ -66,6 +73,7 @@ onMounted(async () => {
           type="range"
           min="200"
           max="340"
+          aria-label="侧边栏宽度（像素）"
           :value="theme.settings.sidebarWidth"
           @input="theme.update({ sidebarWidth: Number(($event.target as HTMLInputElement).value) })"
         />
@@ -77,14 +85,15 @@ onMounted(async () => {
     <div class="card">
       <h3>我的用量 / 审计</h3>
       <table>
+        <caption class="visually-hidden">我的用量与审计记录</caption>
         <thead>
           <tr>
-            <th>时间</th>
-            <th>模型</th>
-            <th>主机</th>
-            <th>状态</th>
-            <th>tokens</th>
-            <th>回退</th>
+            <th scope="col">时间</th>
+            <th scope="col">模型</th>
+            <th scope="col">主机</th>
+            <th scope="col">状态</th>
+            <th scope="col">tokens</th>
+            <th scope="col">回退</th>
           </tr>
         </thead>
         <tbody>

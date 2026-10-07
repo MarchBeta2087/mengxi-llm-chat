@@ -56,16 +56,17 @@ onMounted(load)
 
 <template>
   <div class="card">
-    <p v-if="error" class="notice">{{ error }}</p>
+    <p v-if="error" class="notice" role="alert">{{ error }}</p>
     <table>
+      <caption class="visually-hidden">用户列表</caption>
       <thead>
         <tr>
-          <th>用户名</th>
-          <th>角色</th>
-          <th>状态</th>
-          <th>日配额</th>
-          <th>用户组</th>
-          <th>操作</th>
+          <th scope="col">用户名</th>
+          <th scope="col">角色</th>
+          <th scope="col">状态</th>
+          <th scope="col">日配额</th>
+          <th scope="col">用户组</th>
+          <th scope="col">操作</th>
         </tr>
       </thead>
       <tbody>
@@ -79,6 +80,7 @@ onMounted(load)
           <td>
             <select
               :value="user.group_id ?? ''"
+              :aria-label="`${user.username} 的用户组`"
               @change="assignGroup(user, ($event.target as HTMLSelectElement).value)"
             >
               <option value="">未分组</option>
@@ -88,8 +90,15 @@ onMounted(load)
             </select>
           </td>
           <td>
-            <button class="btn small" @click="setQuota(user)">改配额</button>
-            <button class="btn small" @click="toggleStatus(user)">
+            <button class="btn small" type="button" :aria-label="`修改 ${user.username} 的配额`" @click="setQuota(user)">
+              改配额
+            </button>
+            <button
+              class="btn small"
+              type="button"
+              :aria-label="`${user.status === 'active' ? '封禁' : '解封'} ${user.username}`"
+              @click="toggleStatus(user)"
+            >
               {{ user.status === 'active' ? '封禁' : '解封' }}
             </button>
           </td>

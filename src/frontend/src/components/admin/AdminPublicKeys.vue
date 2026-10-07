@@ -78,21 +78,22 @@ onMounted(load)
 
 <template>
   <div>
-    <p v-if="error" class="notice">{{ error }}</p>
-    <p v-if="info" class="notice ok">{{ info }}</p>
+    <p v-if="error" class="notice" role="alert">{{ error }}</p>
+    <p v-if="info" class="notice ok" role="status">{{ info }}</p>
 
     <div class="card">
       <h3>公有 Key（全员可用）</h3>
       <table>
+        <caption class="visually-hidden">公有 API Key 列表</caption>
         <thead>
           <tr>
-            <th>名称</th>
-            <th>Key</th>
-            <th>Base URL</th>
-            <th>模型</th>
-            <th>六维限流</th>
-            <th>状态</th>
-            <th>操作</th>
+            <th scope="col">名称</th>
+            <th scope="col">Key</th>
+            <th scope="col">Base URL</th>
+            <th scope="col">模型</th>
+            <th scope="col">六维限流</th>
+            <th scope="col">状态</th>
+            <th scope="col">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -109,11 +110,25 @@ onMounted(load)
               <span class="tag" :class="{ off: key.status !== 'active' }">{{ key.status }}</span>
             </td>
             <td>
-              <button class="btn small" @click="test(key)">测试</button>
-              <button class="btn small" @click="toggle(key)">
+              <button class="btn small" type="button" :aria-label="`测试 ${key.provider_name}`" @click="test(key)">
+                测试
+              </button>
+              <button
+                class="btn small"
+                type="button"
+                :aria-label="`${key.status === 'active' ? '停用' : '启用'} ${key.provider_name}`"
+                @click="toggle(key)"
+              >
                 {{ key.status === 'active' ? '停用' : '启用' }}
               </button>
-              <button class="btn small" @click="remove(key)">删除</button>
+              <button
+                class="btn small"
+                type="button"
+                :aria-label="`删除 ${key.provider_name}`"
+                @click="remove(key)"
+              >
+                删除
+              </button>
             </td>
           </tr>
           <tr v-if="!keys.length">
@@ -135,7 +150,7 @@ onMounted(load)
         <label class="field">TPM<input v-model="form.tpm" type="number" min="0" /></label>
         <label class="field">TPD<input v-model="form.tpd" type="number" min="0" /></label>
         <div class="full">
-          <button class="btn primary" :disabled="busy">保存（经 SSRF 安全校验）</button>
+          <button class="btn primary" type="submit" :disabled="busy">保存（经 SSRF 安全校验）</button>
         </div>
       </form>
     </div>

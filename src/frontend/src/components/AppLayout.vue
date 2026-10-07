@@ -16,26 +16,39 @@ async function logout() {
 
 <template>
   <div class="shell">
-    <nav class="rail">
+    <a class="skip-link" href="#main">跳到主内容</a>
+    <nav class="rail" aria-label="主导航">
       <div class="brand">
         <h1>梦溪畅谈</h1>
         <p>mengxi-llm-chat</p>
       </div>
-      <RouterLink to="/" class="nav-link">💬 聊天</RouterLink>
-      <RouterLink to="/keys" class="nav-link">🔑 我的 Key</RouterLink>
-      <RouterLink to="/plugins" class="nav-link">🧩 插件</RouterLink>
-      <RouterLink to="/settings" class="nav-link">⚙ 设置</RouterLink>
-      <RouterLink to="/about" class="nav-link">ℹ 关于</RouterLink>
-      <RouterLink v-if="auth.isAdmin()" to="/admin" class="nav-link">🛡 管理后台</RouterLink>
+      <RouterLink to="/" class="nav-link"><span aria-hidden="true">💬</span> 聊天</RouterLink>
+      <RouterLink to="/keys" class="nav-link"><span aria-hidden="true">🔑</span> 我的 Key</RouterLink>
+      <RouterLink to="/plugins" class="nav-link"><span aria-hidden="true">🧩</span> 插件</RouterLink>
+      <RouterLink to="/settings" class="nav-link"><span aria-hidden="true">⚙</span> 设置</RouterLink>
+      <RouterLink to="/about" class="nav-link"><span aria-hidden="true">ℹ</span> 关于</RouterLink>
+      <RouterLink v-if="auth.isAdmin()" to="/admin" class="nav-link">
+        <span aria-hidden="true">🛡</span> 管理后台
+      </RouterLink>
       <div class="spacer" />
-      <button class="nav-link" @click="theme.panelOpen = !theme.panelOpen">🎨 外观</button>
+      <button
+        class="nav-link"
+        type="button"
+        :aria-expanded="theme.panelOpen"
+        aria-controls="theme-panel"
+        @click="theme.panelOpen = !theme.panelOpen"
+      >
+        <span aria-hidden="true">🎨</span> 外观
+      </button>
       <div class="who">
         <span class="uname">{{ auth.user?.username }}</span>
         <span class="role">{{ auth.user?.role }}</span>
       </div>
-      <button class="nav-link logout" @click="logout">🚪 退出登录</button>
+      <button class="nav-link logout" type="button" @click="logout">
+        <span aria-hidden="true">🚪</span> 退出登录
+      </button>
     </nav>
-    <main class="content">
+    <main id="main" class="content" tabindex="-1">
       <RouterView />
     </main>
     <ThemePanel />

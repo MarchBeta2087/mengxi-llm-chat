@@ -6,3 +6,9 @@ contact_links:
   - name: 安全漏洞（私下报告）
     url: https://github.com/MarchBeta2087/mengxi-llm-chat/security/advisories/new
     about: 请勿公开提交安全问题，使用私密安全通告
+  - name: 安全政策（支持版本 / 响应时限 / 范围）
+    url: https://github.com/MarchBeta2087/mengxi-llm-chat/blob/main/SECURITY.md
+    about: 了解漏洞处理流程、支持版本与安全研究范围
+  - name: 无障碍声明与反馈
+    url: https://github.com/MarchBeta2087/mengxi-llm-chat/blob/main/ACCESSIBILITY.md
+    about: 了解 WCAG 2.1 AA 目标、已实现能力与已知限制

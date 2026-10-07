@@ -50,24 +50,26 @@ onMounted(load)
 <template>
   <div class="card">
     <div class="create">
-      <input v-model="newName" placeholder="新用户组名称" />
+      <input v-model="newName" aria-label="新用户组名称" placeholder="新用户组名称" />
       <input
         v-model="newQuota"
         type="number"
         min="0"
+        aria-label="组日配额（0 表示不限）"
         placeholder="组日配额（0=不限）"
         class="quota"
       />
-      <button class="btn primary small" @click="create">创建</button>
+      <button class="btn primary small" type="button" @click="create">创建</button>
     </div>
-    <p v-if="error" class="notice">{{ error }}</p>
+    <p v-if="error" class="notice" role="alert">{{ error }}</p>
     <table>
+      <caption class="visually-hidden">用户组列表</caption>
       <thead>
         <tr>
-          <th>名称</th>
-          <th>日配额</th>
-          <th>ID</th>
-          <th>操作</th>
+          <th scope="col">名称</th>
+          <th scope="col">日配额</th>
+          <th scope="col">ID</th>
+          <th scope="col">操作</th>
         </tr>
       </thead>
       <tbody>
@@ -76,8 +78,12 @@ onMounted(load)
           <td>{{ group.daily_quota_tokens || '不限' }}</td>
           <td><code>{{ group.id }}</code></td>
           <td>
-            <button class="btn small" @click="setQuota(group)">改配额</button>
-            <button class="btn small" @click="rename(group)">改名</button>
+            <button class="btn small" type="button" :aria-label="`修改 ${group.name} 的配额`" @click="setQuota(group)">
+              改配额
+            </button>
+            <button class="btn small" type="button" :aria-label="`重命名 ${group.name}`" @click="rename(group)">
+              改名
+            </button>
           </td>
         </tr>
         <tr v-if="!groups.length">

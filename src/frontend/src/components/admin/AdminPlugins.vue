@@ -122,21 +122,22 @@ onMounted(load)
 
 <template>
   <div>
-    <p v-if="error" class="notice">{{ error }}</p>
-    <p v-if="info" class="notice ok">{{ info }}</p>
+    <p v-if="error" class="notice" role="alert">{{ error }}</p>
+    <p v-if="info" class="notice ok" role="status">{{ info }}</p>
 
     <div class="card">
       <h3>已安装插件</h3>
       <table>
+        <caption class="visually-hidden">已安装插件列表</caption>
         <thead>
           <tr>
-            <th>名称</th>
-            <th>版本</th>
-            <th>类型</th>
-            <th>默认状态</th>
-            <th>启用</th>
-            <th>权限</th>
-            <th>操作</th>
+            <th scope="col">名称</th>
+            <th scope="col">版本</th>
+            <th scope="col">类型</th>
+            <th scope="col">默认状态</th>
+            <th scope="col">启用</th>
+            <th scope="col">权限</th>
+            <th scope="col">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -144,7 +145,11 @@ onMounted(load)
             <td>{{ plugin.name }}</td>
             <td>{{ plugin.version }}</td>
             <td>
-              <select :value="plugin.type" @change="patch(plugin, 'type', ($event.target as HTMLSelectElement).value)">
+              <select
+                :value="plugin.type"
+                :aria-label="`${plugin.name} 类型`"
+                @change="patch(plugin, 'type', ($event.target as HTMLSelectElement).value)"
+              >
                 <option value="global">全局</option>
                 <option value="optional">可选</option>
               </select>
@@ -152,6 +157,7 @@ onMounted(load)
             <td>
               <select
                 :value="plugin.default_state"
+                :aria-label="`${plugin.name} 默认状态`"
                 @change="patch(plugin, 'default_state', ($event.target as HTMLSelectElement).value)"
               >
                 <option value="enabled">启用</option>
@@ -161,6 +167,7 @@ onMounted(load)
             <td>
               <select
                 :value="plugin.status"
+                :aria-label="`${plugin.name} 启用状态`"
                 @change="patch(plugin, 'status', ($event.target as HTMLSelectElement).value)"
               >
                 <option value="active">启用</option>
@@ -168,7 +175,11 @@ onMounted(load)
               </select>
             </td>
             <td class="perm">{{ plugin.permissions.join(', ') || '无' }}</td>
-            <td><button class="btn small" @click="invoke(plugin)">试运行</button></td>
+            <td>
+              <button class="btn small" type="button" :aria-label="`试运行 ${plugin.name}`" @click="invoke(plugin)">
+                试运行
+              </button>
+            </td>
           </tr>
           <tr v-if="!plugins.length">
             <td colspan="7" class="empty">暂无插件</td>
@@ -178,19 +189,20 @@ onMounted(load)
     </div>
 
     <div class="card">
-      <h3>👥 用户组插件策略</h3>
+      <h3><span aria-hidden="true">👥</span> 用户组插件策略</h3>
       <div class="row">
-        <select v-model="selectedGroup" @change="loadGroupPlugins">
+        <select v-model="selectedGroup" aria-label="选择用户组" @change="loadGroupPlugins">
           <option value="">选择用户组…</option>
           <option v-for="group in groups" :key="group.id" :value="group.id">{{ group.name }}</option>
         </select>
       </div>
       <table v-if="selectedGroup">
+        <caption class="visually-hidden">所选用户组的插件策略</caption>
         <thead>
           <tr>
-            <th>插件</th>
-            <th>类型</th>
-            <th>组内状态</th>
+            <th scope="col">插件</th>
+            <th scope="col">类型</th>
+            <th scope="col">组内状态</th>
           </tr>
         </thead>
         <tbody>
@@ -200,6 +212,7 @@ onMounted(load)
             <td>
               <select
                 :value="entry.state ?? ''"
+                :aria-label="`${entry.name} 组内状态`"
                 @change="setGroupState(entry.plugin_id, ($event.target as HTMLSelectElement).value)"
               >
                 <option value="">未设置</option>
@@ -214,15 +227,16 @@ onMounted(load)
     </div>
 
     <div class="card">
-      <h3>🛒 内置插件市场</h3>
+      <h3><span aria-hidden="true">🛒</span> 内置插件市场</h3>
       <table v-if="builtin.length">
+        <caption class="visually-hidden">内置插件市场</caption>
         <thead>
           <tr>
-            <th>名称</th>
-            <th>版本</th>
-            <th>类型</th>
-            <th>说明</th>
-            <th>操作</th>
+            <th scope="col">名称</th>
+            <th scope="col">版本</th>
+            <th scope="col">类型</th>
+            <th scope="col">说明</th>
+            <th scope="col">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -235,11 +249,21 @@ onMounted(load)
               <td>
                 <button
                   class="btn small"
+                  type="button"
+                  :aria-expanded="expanded === item.name"
+                  :aria-label="`查看 ${item.name} 详情`"
                   @click="expanded = expanded === item.name ? '' : item.name"
                 >
                   详情
                 </button>
-                <button class="btn small primary" @click="installBuiltin(item.name)">安装</button>
+                <button
+                  class="btn small primary"
+                  type="button"
+                  :aria-label="`安装 ${item.name}`"
+                  @click="installBuiltin(item.name)"
+                >
+                  安装
+                </button>
               </td>
             </tr>
             <tr v-if="expanded === item.name">
@@ -265,7 +289,7 @@ onMounted(load)
           <textarea v-model="codeText" rows="12" spellcheck="false"></textarea>
         </label>
       </div>
-      <button class="btn primary" @click="install">安装 / 更新</button>
+      <button class="btn primary" type="button" @click="install">安装 / 更新</button>
     </div>
   </div>
 </template>

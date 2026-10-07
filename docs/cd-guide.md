@@ -132,7 +132,7 @@ spec:
 
 4. 发布新版本时，由 CI 更新清单中的镜像 tag（提交回仓库），ArgoCD 自动同步并滚动更新。
 
-> 注意：主密钥（档 B）需以 Secret 注入；档 A 需在 Pod 启动后解锁；跨副本请使用档 C（KMS）。详见设计说明书 §3.3、部署手册 §11。
+> 注意：主密钥（档 B）需以 Secret 注入；档 A 需在 Pod 启动后解锁（每个副本都要解锁，不推荐多副本）；跨副本请使用**档 B**（同一 `MENGXI_MASTER_KEY_B64` 注入所有副本）。档 C（KMS）为路线图，v1.0 未实现。详见设计说明书 §3.3、部署手册 §11。
 >
 > Secret 管理推荐 **Sealed Secrets**（密文可入 Git）或 **External Secrets**；
 > 仓库提供生成脚本 `deploy/k8s/seal-secret.sh` 与示例模板，详见

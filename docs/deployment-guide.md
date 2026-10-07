@@ -59,7 +59,9 @@ python -c "import os,base64;print(base64.urlsafe_b64encode(os.urandom(32)).decod
 | --- | --- | --- |
 | A | `MENGXI_KEK_PROFILE=A` | 最高安全：口令派生，重启需解锁；提供恢复码 |
 | B | `MENGXI_KEK_PROFILE=B` + `MENGXI_MASTER_KEY_B64=…` | 轻量部署：接受"读到密钥文件即可解密" |
-| C | `MENGXI_KEK_PROFILE=C` + KMS 配置 | 生产/多实例（M5 后接入） |
+| C | `MENGXI_KEK_PROFILE=C` + KMS 配置 | 合规/云 KMS 环境（路线图，v1.0 未实现） |
+
+> 多副本部署请使用档 B（所有副本注入相同 `MENGXI_MASTER_KEY_B64`）；档位选择与多实例细节见 §11。
 
 ### 3.2 启动
 
@@ -245,11 +247,24 @@ docker compose up -d
 ## 11. 多实例与水平扩展
 
 - **状态外置**：限流/配额/熔断已在 Redis；会话目前为签名 Cookie（无状态），可直接多副本；
-- **主密钥**：多实例需统一 KEK，建议档 C（KMS）或档 B + 相同密钥；
+- **主密钥**：多实例需统一 KEK。**推荐档 B**：所有副本注入相同的 `MENGXI_MASTER_KEY_B64`
+  （K8s 用 Secret / Sealed Secrets / External Secrets，Compose 用 Docker secret 或受控 `.env`），
+  重启免解锁、天然共享；档 C（KMS）为路线图，v1.0 未实现；
 - **DEK 缓存**：多实例各自缓存 DEK_conv，轮换时需同时失效（演进方向：Redis 广播失效）；
 - **插件沙箱**：可拆分为独立服务/容器以强化隔离；
 - **数据库**：使用托管 PostgreSQL 或主从；
 - 加解密为 AES-NI 轻量操作，不构成扩展瓶颈。
+
+### 11.1 主密钥档位选择
+
+| 场景 | 推荐档 | 说明 |
+| --- | --- | --- |
+| 单实例、离线/内网、追求最高安全 | **A** | 口令 Argon2id 派生，KEK 不落盘；重启需人工解锁，删除/轮换需保存口令与恢复码 |
+| 单实例或**多副本**、希望重启免解锁 | **B** | 32B 主密钥置于 Secret 管理；多副本注入同一密钥即可共享 KEK |
+| 多租户合规、需 HSM / 密钥托管 / 审计 | C | KMS（AWS KMS / Vault），**路线图，v1.0 未实现** |
+
+> 结论：档 C 落地前，**多副本一律使用档 B**。不建议多副本采用档 A（每个副本都需人工解锁）；
+> 本地/自托管单实例通常无需引入 KMS，其运维成本高于收益。
 
 ---
 
