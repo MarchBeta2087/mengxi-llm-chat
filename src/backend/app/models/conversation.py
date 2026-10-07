@@ -11,7 +11,6 @@ from sqlalchemy import Boolean, ForeignKey, Integer, LargeBinary, String, Text, 
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, CreatedAtMixin
-from app.db.types import json_type
 
 
 class Conversation(Base, CreatedAtMixin):
@@ -38,7 +37,6 @@ class Message(Base, CreatedAtMixin):
     content_encrypted: Mapped[str] = mapped_column(Text, nullable=False)
     tokens_in: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     tokens_out: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    blind_index: Mapped[dict | None] = mapped_column(json_type(), nullable=True)
 
 
 class MessageKeyword(Base):

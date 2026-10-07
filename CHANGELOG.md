@@ -46,3 +46,5 @@ docker run --rm -v "$PWD:/app" -w /app orhunp/git-cliff:latest --unreleased --st
 | M4 | 对话加密、盲索引搜索、恢复码 |
 | M5 | 管理后台、前端 SPA、发布打磨 |
 | CI/CD | 质量门禁、安全扫描、SBOM、E2E、GHCR 发布与签名、CD |
+
+> 说明：主密钥档 C（KMS，`KmsKekProvider`）与匿名访问开关均为路线图能力，v1.0.0 尚未实现（设计说明书 §3.3 / §13.2 已标注）。
