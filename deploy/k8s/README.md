@@ -34,7 +34,7 @@ kubectl -n mengxi logs job/mengxi-migrate
 ```
 
 - 更新版本：修改 overlay 的 `images.newTag`（或改用 `newName` + `digest`）后 `kubectl apply -k`。
-- 档 A（口令派生）需在启动后调用 `POST /api/admin/kek/unlock` 解锁；跨副本请使用档 C（KMS）。
+- 档 A（口令派生）需在启动后调用 `POST /api/admin/kek/unlock` 解锁（**每个副本都要解锁，不推荐多副本**）；跨副本请使用**档 B**（本清单默认 `MENGXI_KEK_PROFILE=B`，同一 `MENGXI_MASTER_KEY_B64` 经 Secret 注入所有副本）。档 C（KMS）为路线图，v1.0 未实现。
 - `data` 为 RWO PVC，多副本 `app` 需 ReadWriteMany 或改用对象存储；单副本最简。
 - SSE 需 Ingress 关闭缓冲（已在 `ingress.yaml` 注解）。
 
