@@ -61,6 +61,21 @@ describe('request via api', () => {
     await expect(api.logout()).resolves.toBeUndefined()
   })
 
+  it('错误响应体不是 JSON 时回退到 statusText', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response('bad gateway', { status: 502, statusText: 'Bad Gateway' }),
+      ),
+    )
+    await expect(api.me()).rejects.toMatchObject({
+      status: 502,
+      code: 502,
+      message: 'Bad Gateway',
+    })
+  })
+
   it('覆盖各业务端点的调用', async () => {
     stubJson({})
     await api.register('a', 'b')
@@ -71,6 +86,7 @@ describe('request via api', () => {
     await api.deleteKey('k1')
     await api.testKey('k1')
     await api.models()
+    await api.availableKeys()
     await api.listConversations(true)
     await api.createConversation('t', 'gpt-4o')
     await api.updateConversation('c1', { title: 'x' })
@@ -84,6 +100,7 @@ describe('request via api', () => {
     await api.adminUpdateUser('u1', { status: 'banned' })
     await api.adminGroups()
     await api.adminCreateGroup('g', 100)
+    await api.adminUpdateGroup('g1', { daily_quota_tokens: 200 })
     await api.adminAudit('?fallback_only=true')
     await api.adminKek()
     await api.adminRecoveryStatus()
@@ -101,6 +118,8 @@ describe('request via api', () => {
     await api.adminGroupPlugins('g1')
     await api.adminSetGroupPlugin('g1', 'p1', 'enabled')
     await api.adminClearGroupPlugin('g1', 'p1')
+    await api.adminBuiltinPlugins()
+    await api.adminInstallBuiltin('echo')
     await api.adminKek()
     await api.adminKekInitialize('passphrase123')
     await api.adminKekUnlock('passphrase123')
@@ -109,6 +128,22 @@ describe('request via api', () => {
     await api.adminRecoveryRegenerate()
     await api.adminRecoveryUse('CODE-CODE-CODE', 'newpass123')
     expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(10)
+  })
+
+  it('导出审计 CSV 返回文本', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('id,action\n1,login\n', { status: 200 })),
+    )
+    await expect(api.exportAuditCsv('?limit=1')).resolves.toContain('login')
+  })
+
+  it('导出审计 CSV 失败时抛出 ApiError', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('forbidden', { status: 403, statusText: 'Forbidden' })),
+    )
+    await expect(api.exportAuditCsv()).rejects.toMatchObject({ status: 403, message: 'Forbidden' })
   })
 })
 
@@ -155,5 +190,17 @@ describe('streamChat', () => {
     await expect(
       streamChat({ model: 'gpt-4o', messages: [] }, () => {}),
     ).rejects.toBeInstanceOf(ApiError)
+  })
+
+  it('非 2xx 且响应体不是 JSON 时回退到 statusText', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('upstream error', { status: 502, statusText: 'Bad Gateway' })),
+    )
+    await expect(streamChat({ model: 'gpt-4o', messages: [] }, () => {})).rejects.toMatchObject({
+      status: 502,
+      code: 502,
+      message: 'Bad Gateway',
+    })
   })
 })
