@@ -37,3 +37,8 @@ updates:
     schedule:
       interval: weekly
     labels: [dependencies, docker]
+    ignore:
+      # Node 25 属于 current 线（非 LTS），而 CI 使用 node-version 24；
+      # 等 Node LTS 大版本发布后再放开（同时调整 CI 的 node-version）。
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
