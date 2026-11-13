@@ -76,6 +76,12 @@ jobs:
       - name: Dependency vulnerability audit (pnpm audit)
         run: pnpm audit --audit-level high
 
+      - name: Verify TypeScript version (vue-tsc 仅支持 TS 5.x)
+        run: |
+          node -e "const v=require('typescript/package.json').version;
+          if(!v.startsWith('5.')){console.error('TypeScript '+v+' 不被 vue-tsc 支持（缺少 ./lib/tsc 导出）');process.exit(1);}
+          console.log('typescript', v)"
+
       - name: Type check (vue-tsc)
         run: pnpm typecheck
 
