@@ -8,7 +8,9 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 # 系统依赖：argon2/cryptography 使用 manylinux wheel，通常无需编译工具
+# 同时升级基础镜像内的系统包（zlib1g 等），避免 Trivy 报出已修复的 CVE
 RUN apt-get update \
+    && apt-get -y upgrade \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 

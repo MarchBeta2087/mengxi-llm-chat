@@ -16,6 +16,13 @@ updates:
     groups:
       frontend-dev-deps:
         dependency-type: development
+    ignore:
+      # vue-tsc 3.x 依赖 typescript 的 ./lib/tsc 子路径导出，
+      # TypeScript 7（原生 tsgo）已移除该导出，会报
+      # ERR_PACKAGE_PATH_NOT_EXPORTED: './lib/tsc'。
+      # 待 vue-tsc 正式支持 TS 7 后再放开大版本升级。
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
@@ -30,3 +37,8 @@ updates:
     schedule:
       interval: weekly
     labels: [dependencies, docker]
+    ignore:
+      # Node 25 属于 current 线（非 LTS），而 CI 使用 node-version 24；
+      # 等 Node LTS 大版本发布后再放开（同时调整 CI 的 node-version）。
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
